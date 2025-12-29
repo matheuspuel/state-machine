@@ -1,0 +1,42 @@
+{
+  "name": "@matheuspuel/state-machine",
+  "version": "0.1.0",
+  "type": "module",
+  "module": "index.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./src/index.ts",
+    "./mahcines": "./src/machines/index.ts",
+    "./react": "./src/react/index.ts",
+    "./runtime": "./src/runtime/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0 --config .eslintrc.production.js",
+    "lint:fix": "eslint . --fix --config .eslintrc.production.js",
+    "typecheck": "tsc",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@matheuspuel/optic": "^0.1.0",
+    "effect": "^3.18.1",
+    "react": "19.1.0",
+    "use-sync-external-store": "^1.5.0"
+  },
+  "devDependencies": {
+    "@effect/language-service": "^0.41.1",
+    "@effect/vitest": "^0.26.0",
+    "@types/react": "~19.1.17",
+    "@types/use-sync-external-store": "^1.5.0",
+    "@typescript-eslint/parser": "^8.29.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-prettier": "^5.2.6",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  }
+}
