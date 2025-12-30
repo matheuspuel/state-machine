@@ -1,5 +1,9 @@
 import * as React from 'react'
-import { AnyStateActions, PreparedStateActions, StateMachine } from '..'
+import {
+  AnyStateActions,
+  PreparedStateActions,
+  StateMachine,
+} from '../definition'
 import { useStateMachine } from './useStateMachine'
 
 export const makeStateMachineContext = <State, Actions extends AnyStateActions>(

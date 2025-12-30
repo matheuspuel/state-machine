@@ -1,10 +1,10 @@
 import * as React from 'react'
 import {
   AnyStateActions,
-  makeMachineStore,
-  prepareStateMachineActions,
+  makeStore,
+  prepareActions,
   StateMachine,
-} from '..'
+} from '../definition'
 
 export const useStateMachine = <State, Actions extends AnyStateActions>(
   stateMachine:
@@ -18,7 +18,7 @@ export const useStateMachine = <State, Actions extends AnyStateActions>(
   const getState = React.useMemo(() => () => stateRef.current, [])
   const store = React.useMemo(
     () =>
-      makeMachineStore<State>({
+      makeStore<State>({
         get: getState,
         update: fn => {
           const previousState = getState()
@@ -31,7 +31,7 @@ export const useStateMachine = <State, Actions extends AnyStateActions>(
     [machine, getState],
   )
   const actions = React.useMemo(
-    () => prepareStateMachineActions(machine, store),
+    () => prepareActions(machine, store),
     [machine, store],
   )
   React.useEffect(() => {

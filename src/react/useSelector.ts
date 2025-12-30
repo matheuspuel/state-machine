@@ -1,11 +1,11 @@
 import { Effect, Equal, Equivalence } from 'effect'
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector'
-import { AnyStateActions } from '../index.js'
-import { RunningStateMachine } from '../runtime'
+import { AnyStateActions } from '../definition.js'
+import { Instance } from '../runtime'
 
 export const makeUseSelector =
   <State, Actions extends AnyStateActions>(
-    stateMachine: RunningStateMachine<State, Actions>,
+    stateMachine: Instance<State, Actions>,
   ) =>
   <A>(
     selector: (state: State) => A,

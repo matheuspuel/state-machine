@@ -1,12 +1,13 @@
 {
   "name": "@matheuspuel/state-machine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "module": "index.ts",
   "exports": {
     "./package.json": "./package.json",
     ".": "./src/index.ts",
-    "./mahcines": "./src/machines/index.ts",
+    "./definition": "./src/definition.ts",
+    "./machines": "./src/machines/index.ts",
     "./react": "./src/react/index.ts",
     "./runtime": "./src/runtime/index.ts"
   },
