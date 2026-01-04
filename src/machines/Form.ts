@@ -1,6 +1,6 @@
-import { Effect, Either, Option, Record } from 'effect';
-import { make, makeStore, Store } from '../definition';
-import { AnyForm, FormField } from '../form/definition';
+import { Effect, Either, Option, Record } from 'effect'
+import { make, makeStore, Store } from '../definition'
+import { AnyForm, FormField } from '../form/definition'
 
 export type FormState<Form extends AnyForm> = {
   [K in keyof Form]: Form[K] extends FormField<infer A, infer I, infer E>
@@ -57,7 +57,7 @@ export const Form = <F extends AnyForm>(form: F) => {
             update: (f: (previous: any) => any) =>
               Store.update(_ => ({
                 ..._,
-                [key]: { value: f(_.value), error: null },
+                [key]: { value: f(_[key]!.value), error: null },
               })),
             set: (value: any) =>
               Store.update(_ => ({ ..._, [key]: { value, error: null } })),

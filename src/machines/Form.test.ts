@@ -33,7 +33,7 @@ describe('Form', () => {
       a: { value: 1, error: 'low' },
       b: { c: { value: 0, error: 'low' } },
     })
-    instance.actions.a.set(2)
+    instance.actions.a.update(_ => _ + 1)
     expect(getState()).toStrictEqual<ReturnType<typeof getState>>({
       a: { value: 2, error: null },
       b: { c: { value: 0, error: 'low' } },
@@ -48,7 +48,7 @@ describe('Form', () => {
       a: { value: 2, error: null },
       b: { c: { value: 1, error: 'low' } },
     })
-    instance.actions.b.c.set(2)
+    instance.actions.b.c.update(_ => _ + 1)
     expect(getState()).toStrictEqual<ReturnType<typeof getState>>({
       a: { value: 2, error: null },
       b: { c: { value: 2, error: null } },
