@@ -1,23 +1,24 @@
 import { describe, expect, it } from '@effect/vitest'
-import { Effect } from 'effect'
-import { run } from '../runtime'
-import { Struct } from './Struct'
-import { of } from './of'
+import { Effect, pipe } from 'effect'
+import { StateMachine } from '..'
 
 describe('Struct', () => {
   it('should work', () => {
-    const machine = Struct(
-      {
-        a: of(0),
-        b: of(''),
-      },
-      {
-        extraActions: ({ Store }) => ({
-          get: () => Store.get(),
+    const machine = pipe(
+      StateMachine.Struct({
+        a: StateMachine.of(0),
+        b: StateMachine.of(''),
+      }),
+      base =>
+        StateMachine.make<(typeof base)['initialState']>()({
+          ...base,
+          actions: ({ Store }) => ({
+            ...base.actions({ Store }),
+            get: () => Store.get(),
+          }),
         }),
-      },
     )
-    const instance = run(machine)
+    const instance = StateMachine.run(machine)
     const getState = () => instance.ref.get.pipe(Effect.runSync)
     expect(getState()).toStrictEqual({ a: 0, b: '' })
     instance.actions.a.set(1)
