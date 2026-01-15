@@ -1,3 +1,5 @@
-export { make, StateMachine } from './definition'
-export * from './machines'
-export { Instance, run } from './runtime'
+export { make } from './definition.js'
+export type { StateMachine } from './definition.js'
+export * from './machines/index.js'
+export { run } from './runtime/index.js'
+export type { Instance } from './runtime/index.js'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@effect/vitest'
+import { StateMachine } from '@matheuspuel/state-machine'
 import { Effect, pipe } from 'effect'
-import { StateMachine } from '..'
 
 describe('Struct', () => {
   it('should work', () => {

@@ -1,12 +1,11 @@
 import { describe, expect, it } from '@effect/vitest'
+import { StateMachine } from '@matheuspuel/state-machine'
 import { Effect } from 'effect'
-import { run } from '../runtime'
-import { of } from './of'
 
 describe('of', () => {
   it('should work', () => {
-    const machine = of('')
-    const instance = run(machine)
+    const machine = StateMachine.of('')
+    const instance = StateMachine.run(machine)
     instance.actions.set('a')
     const state = instance.ref.get.pipe(Effect.runSync)
     expect(state).toStrictEqual('a')

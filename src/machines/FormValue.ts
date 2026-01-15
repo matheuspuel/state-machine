@@ -1,4 +1,4 @@
-import { make } from '../definition'
+import { make } from '../definition.js'
 
 export type FormValue<A, E> = { value: A; error: E | null }
 

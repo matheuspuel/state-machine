@@ -1,1 +1,1 @@
-export * as Form from './definition'
+export * as Form from './definition.js'

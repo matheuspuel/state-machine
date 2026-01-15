@@ -4,7 +4,7 @@ import {
   makeStore,
   prepareActions,
   StateMachine,
-} from '../definition'
+} from '../definition.js'
 
 export const useStateMachine = <State, Actions extends AnyStateActions>(
   stateMachine:

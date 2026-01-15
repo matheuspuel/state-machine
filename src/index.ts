@@ -1,1 +1,1 @@
-export * as StateMachine from './StateMachine'
+export * as StateMachine from './StateMachine.js'

@@ -1,5 +1,10 @@
 import { Record } from 'effect'
-import { AnyStateActions, make, makeStore, StateMachine } from '../definition'
+import {
+  AnyStateActions,
+  make,
+  makeStore,
+  StateMachine,
+} from '../definition.js'
 
 export const Struct = <
   A extends Record<string, StateMachine<any, AnyStateActions>>,

@@ -1,7 +1,7 @@
 import { Effect, Equal, Equivalence } from 'effect'
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector'
 import { AnyStateActions } from '../definition.js'
-import { Instance } from '../runtime'
+import { Instance } from '../runtime/index.js'
 
 export const makeUseSelector =
   <State, Actions extends AnyStateActions>(

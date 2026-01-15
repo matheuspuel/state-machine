@@ -1,6 +1,6 @@
 import { Effect, Either, Option, Record } from 'effect'
-import { make, makeStore, Store } from '../definition'
-import { AnyForm, FormField } from '../form/definition'
+import { make, makeStore, Store } from '../definition.js'
+import { AnyForm, FormField } from '../form/definition.js'
 
 export type FormState<Form extends AnyForm> = {
   [K in keyof Form]: Form[K] extends FormField<infer A, infer I, infer E>

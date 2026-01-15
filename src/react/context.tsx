@@ -3,8 +3,8 @@ import {
   AnyStateActions,
   PreparedStateActions,
   StateMachine,
-} from '../definition'
-import { useStateMachine } from './useStateMachine'
+} from '../definition.js'
+import { useStateMachine } from './useStateMachine.js'
 
 export const makeStateMachineContext = <State, Actions extends AnyStateActions>(
   machine: StateMachine<State, Actions>,

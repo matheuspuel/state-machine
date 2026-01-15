@@ -1,4 +1,4 @@
-export { Form } from './Form'
-export { FormValue } from './FormValue'
-export { of } from './of'
-export { Struct } from './Struct'
+export { Form } from './Form.js'
+export { FormValue } from './FormValue.js'
+export { of } from './of.js'
+export { Struct } from './Struct.js'

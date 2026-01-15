@@ -1,14 +1,7 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true,
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "target": "ESNext",
-    "jsx": "preserve",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noFallthroughCasesInSwitch": true,
-    "plugins": [{ "name": "@effect/language-service" }]
+    "noEmit": true
   },
   "include": ["**/*.ts", "**/*.tsx"]
 }

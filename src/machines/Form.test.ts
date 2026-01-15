@@ -1,8 +1,7 @@
 import { describe, expect, it } from '@effect/vitest'
+import { StateMachine } from '@matheuspuel/state-machine'
+import { Form } from '@matheuspuel/state-machine/form'
 import { Effect } from 'effect'
-import { StateMachine } from '..'
-import { Form } from '../form'
-import { run } from '../runtime'
 
 describe('Form', () => {
   it('should work', () => {
@@ -17,7 +16,7 @@ describe('Form', () => {
       b: Form.Struct({ c: formField }),
     })
     const machine = StateMachine.Form(form)
-    const instance = run(machine)
+    const instance = StateMachine.run(machine)
     const getState = () => instance.ref.get.pipe(Effect.runSync)
     expect(getState()).toStrictEqual<ReturnType<typeof getState>>({
       a: { value: 0, error: null },

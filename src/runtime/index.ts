@@ -5,7 +5,7 @@ import {
   prepareActions,
   PreparedStateActions,
   StateMachine,
-} from '../definition'
+} from '../definition.js'
 
 type SubscriptionTask<State> = (state: State) => Effect.Effect<void>
 

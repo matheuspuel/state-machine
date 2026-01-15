@@ -1,25 +1,47 @@
 {
   "name": "@matheuspuel/state-machine",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "type": "module",
-  "module": "index.ts",
+  "files": [
+    "/dist",
+    "/src"
+  ],
   "exports": {
     "./package.json": "./package.json",
-    ".": "./src/index.ts",
-    "./definition": "./src/definition.ts",
-    "./form": "./src/form/index.ts",
-    "./machines": "./src/machines/index.ts",
-    "./react": "./src/react/index.ts",
-    "./runtime": "./src/runtime/index.ts"
+    ".": {
+      "types": "./dist/dts/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./definition": {
+      "types": "./dist/dts/definition.d.ts",
+      "default": "./dist/definition.js"
+    },
+    "./form": {
+      "types": "./dist/dts/form/index.d.ts",
+      "default": "./dist/form/index.js"
+    },
+    "./machines": {
+      "types": "./dist/dts/machines/index.d.ts",
+      "default": "./dist/machines/index.js"
+    },
+    "./react": {
+      "types": "./dist/dts/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/dts/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
+    }
   },
   "scripts": {
+    "build": "tsc -b tsconfig.build.json",
     "lint": "eslint . --max-warnings 0 --config .eslintrc.production.js",
     "lint:fix": "eslint . --fix --config .eslintrc.production.js",
     "typecheck": "tsc",
     "test": "vitest"
   },
   "dependencies": {
-    "@matheuspuel/optic": "^0.1.0",
+    "@matheuspuel/optic": "^0.2.0",
     "effect": "^3.18.1",
     "react": "19.1.0",
     "use-sync-external-store": "^1.5.0"
@@ -27,6 +49,8 @@
   "devDependencies": {
     "@effect/language-service": "^0.41.1",
     "@effect/vitest": "^0.26.0",
+    "@matheuspuel/state-machine": "file:.",
+    "@types/node": "^25.0.8",
     "@types/react": "~19.1.17",
     "@types/use-sync-external-store": "^1.5.0",
     "@typescript-eslint/parser": "^8.29.1",

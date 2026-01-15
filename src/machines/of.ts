@@ -1,4 +1,4 @@
-import { make } from '../definition'
+import { make } from '../definition.js'
 
 export const of = <A>(initialState: A) =>
   make<A>()({
