@@ -1,4 +1,4 @@
-import { Effect, Either, Option, Record } from 'effect'
+import { Data, Effect, Either, Option, Record } from 'effect'
 import { make, makeStore, Store } from '../definition.js'
 import { AnyForm, FormField } from '../form/definition.js'
 
@@ -31,12 +31,17 @@ export type FormActions<Form extends AnyForm> = {
     ? {
         set: (value: I) => void
         update: (f: (previous: I) => I) => void
+        validate: () => Promise<Either.Either<A, E | null>>
         error: { set: (error: E | null) => void }
       }
     : Form[K] extends AnyForm
       ? FormActions<Form[K]>
       : never
 }
+
+export class FormValidationError<Form extends AnyForm> extends Data.TaggedError(
+  'FormValidationError',
+)<{ errors: FormError<Form> }> {}
 
 const isField = (
   value: AnyForm | FormField<any, any, any>,
@@ -59,11 +64,26 @@ export const Form = <F extends AnyForm>(form: F) => {
                 ..._,
                 [key]: { value: f(_[key]!.value), error: null },
               })),
+            validate: () =>
+              Effect.gen(function* () {
+                const result = yield* _.validate(Store.get()[key]!.value).pipe(
+                  Effect.either,
+                )
+                const error = Option.getOrNull(Either.getLeft(result))
+                Store.update(_ => ({
+                  ..._,
+                  [key]: { value: _[key]!.value, error },
+                }))
+                return result
+              }).pipe(Effect.runPromise),
             set: (value: any) =>
               Store.update(_ => ({ ..._, [key]: { value, error: null } })),
             error: {
               set: (error: any) =>
-                Store.update(_ => ({ ..._, [key]: { value: _.value, error } })),
+                Store.update(_ => ({
+                  ..._,
+                  [key]: { value: _[key]!.value, error },
+                })),
             },
           }
         : getActions(
@@ -77,7 +97,7 @@ export const Form = <F extends AnyForm>(form: F) => {
   const validate = <F extends AnyForm>(
     form: F,
     Store: Store<FormState<F>>,
-  ): any =>
+  ): Effect.Effect<FormData<F>, FormValidationError<F>> =>
     Effect.all(
       Record.map(form, (_, key) =>
         isField(_)
@@ -100,13 +120,15 @@ export const Form = <F extends AnyForm>(form: F) => {
                 get: () => Store.get()[key],
                 update: f => Store.update(_ => ({ ..._, [key]: f(_[key]) })),
               }) as any,
-            ),
+            ).pipe(Effect.mapError(e => e.errors)),
       ),
       { mode: 'validate' },
+    ).pipe(
+      Effect.mapError(e => new FormValidationError({ errors: e as any })),
     ) as any
   return make<FormState<F>>()<
     FormActions<F> & {
-      validate: () => Effect.Effect<FormData<F>, FormError<F>>
+      validate: () => Effect.Effect<FormData<F>, FormValidationError<F>>
       setStateFromData: (data: FormData<F>) => void
     }
   >({

@@ -29,5 +29,24 @@ export const Struct = <
         }),
       ) as any),
     }),
-    // TODO implement other options
+    start: ({ Store }) =>
+      Promise.all(
+        Object.keys(fields).map(async key => {
+          const field = fields[key]!
+          return field.start?.({
+            Store: makeStore({
+              get: () => Store.get()[key],
+              update: f => Store.update(_ => ({ ..._, [key]: f(_[key]) })),
+            }) as any,
+          })
+        }),
+      ),
+    onUpdate: async state => {
+      await Promise.all(
+        Object.keys(fields).map(async key => {
+          const field = fields[key]!
+          return field.onUpdate?.(state[key])
+        }),
+      )
+    },
   })

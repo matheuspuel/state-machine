@@ -47,3 +47,16 @@ export const prepareActions = <State, Actions extends AnyStateActions>(
   machine: StateMachine<State, Actions>,
   store: Store<State>,
 ): PreparedStateActions<Actions> => machine.actions({ Store: store })
+
+export const mapActions = <
+  State,
+  Actions extends AnyStateActions,
+  NextActions extends AnyStateActions,
+>(
+  self: StateMachine<State, Actions>,
+  f: (actions: Actions, machine: { Store: Store<State> }) => NextActions,
+): StateMachine<State, NextActions> =>
+  make<State>()({
+    ...self,
+    actions: machine => ({ ...f(self.actions(machine), machine) }),
+  })
