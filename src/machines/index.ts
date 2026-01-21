@@ -1,4 +1,3 @@
-export { Form } from './Form.js'
-export { FormValue } from './FormValue.js'
+export * as Form from './Form.js'
 export { of } from './of.js'
 export { Struct } from './Struct.js'

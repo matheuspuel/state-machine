@@ -1,6 +1,6 @@
 {
   "name": "@matheuspuel/state-machine",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "files": [
     "/dist",
@@ -15,10 +15,6 @@
     "./definition": {
       "types": "./dist/dts/definition.d.ts",
       "default": "./dist/definition.js"
-    },
-    "./form": {
-      "types": "./dist/dts/form/index.d.ts",
-      "default": "./dist/form/index.js"
     },
     "./machines": {
       "types": "./dist/dts/machines/index.d.ts",
@@ -35,6 +31,7 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
+    "build:watch": "tsc -b tsconfig.build.json --watch",
     "lint": "eslint . --max-warnings 0 --config .eslintrc.production.js",
     "lint:fix": "eslint . --fix --config .eslintrc.production.js",
     "typecheck": "tsc",

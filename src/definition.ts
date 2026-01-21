@@ -36,6 +36,13 @@ export type StateMachine<State, Actions extends AnyStateActions> = {
   onUpdate?: (state: State) => void | Promise<void>
 }
 
+export type AnyStateMachineWithActions<Actions extends AnyStateActions> = {
+  initialState: any
+  actions: (machine: { Store: any }) => Actions
+  start?: (machine: { Store: any }) => undefined | Promise<unknown>
+  onUpdate?: (state: any) => void | Promise<void>
+}
+
 export const make =
   <State>() =>
   <Actions extends AnyStateActions>(args: StateMachine<State, Actions>) =>
