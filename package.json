@@ -1,6 +1,6 @@
 {
   "name": "@matheuspuel/state-machine",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "files": [
     "/dist",
@@ -35,10 +35,13 @@
     "lint": "eslint . --max-warnings 0 --config .eslintrc.production.js",
     "lint:fix": "eslint . --fix --config .eslintrc.production.js",
     "typecheck": "tsc",
-    "test": "vitest"
+    "test": "vitest",
+    "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm test",
+    "publish": "pnpm check && pnpm publish"
   },
   "dependencies": {
     "@matheuspuel/optic": "^0.2.0",
+    "@matheuspuel/query-state": "^0.2.0",
     "effect": "^3.18.1",
     "react": "19.1.0",
     "use-sync-external-store": "^1.5.0"
