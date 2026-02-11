@@ -37,7 +37,7 @@
     "typecheck": "tsc",
     "test": "vitest",
     "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm test --run",
-    "publish": "pnpm check && pnpm publish"
+    "upload": "pnpm check && pnpm publish"
   },
   "dependencies": {
     "@matheuspuel/optic": "^0.2.0",
