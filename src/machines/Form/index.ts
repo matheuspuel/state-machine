@@ -1,141 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import {
-  Data,
-  Effect,
-  Either,
-  flow,
-  Option,
-  pipe,
-  Record,
-  Schema,
-} from 'effect'
-import { ParseError } from 'effect/ParseResult'
+import { Effect, Either, Option, pipe, Record } from 'effect'
 import {
   AnyStateMachineWithActions,
-  make,
   mapActions,
   StateMachine,
-} from '../definition.js'
-import { Struct as StateMachineStruct } from '../machines/Struct.js'
+  withState,
+} from '../../definition.js'
+import { Struct as StateMachineStruct } from '../../machines/basic.js'
+import { ValidationError } from './Error.js'
 
-export class ValidationError<E> extends Data.TaggedError(
-  'FormValidationError',
-)<{
-  error: E
-}> {}
-
-export type FormField<A, I, E> = StateMachine<
-  { value: I; error: E | null },
-  {
-    set: (value: I) => void
-    update: (f: (previous: I) => I) => void
-    error: { set: (error: E | null) => void }
-    validate: () => Effect.Effect<A, ValidationError<E>>
-    check: () => Promise<Either.Either<A, ValidationError<E>>>
-    setStateFromData: (data: A) => void
-  }
->
-
-export type AnyFormField = FormField<any, any, any>
-
-export const makeField = <A, I, E>(args: {
-  initial: I
-  validate: (value: I) => Effect.Effect<A, E>
-  fromData: (data: A) => I
-}): FormField<A, I, E> =>
-  make<{ value: I; error: E | null }>()({
-    initialState: { value: args.initial, error: null },
-    actions: ({ Store }) => {
-      const validate = () =>
-        pipe(
-          Store.get().value,
-          args.validate,
-          Effect.tap(() =>
-            Effect.sync(() =>
-              Store.update(_ => ({ value: _.value, error: null })),
-            ),
-          ),
-          Effect.tapError(error =>
-            Effect.sync(() => Store.update(_ => ({ value: _.value, error }))),
-          ),
-          Effect.mapError(error => new ValidationError({ error })),
-        )
-      return {
-        set: value => Store.update(() => ({ value, error: null })),
-        update: f => Store.update(_ => ({ value: f(_.value), error: null })),
-        error: { set: error => Store.update(_ => ({ value: _.value, error })) },
-        validate,
-        check: () => validate().pipe(Effect.either, Effect.runPromise),
-        setStateFromData: data =>
-          Store.update(_ => ({
-            ..._,
-            value: args.fromData(data),
-            error: null,
-          })),
-      }
-    },
-  })
-
-export const field = <A>(initial: A): FormField<A, A, never> =>
-  makeField<A, A, never>({
-    initial: initial,
-    validate: _ => Effect.succeed(_),
-    fromData: _ => _,
-  })
-
-export const fieldWithError =
-  <E>() =>
-  <A, I, E1>(self: FormField<A, I, E1>): FormField<A, I, E | E1> =>
-    self as FormField<A, I, E | E1>
-
-export const transformField = <A, A1, I, E, E1>(
-  self: FormField<A1, I, E1>,
-  args: {
-    validate: (value: NoInfer<A1>) => Effect.Effect<A, E>
-    fromData: (data: A) => NoInfer<A1>
-  },
-): FormField<A, I, E | E1> =>
-  mapActions(fieldWithError<E>()(self), (actions, { Store }) => {
-    const validate = (): Effect.Effect<A, ValidationError<E | E1>, never> =>
-      actions.validate().pipe(
-        Effect.flatMap(
-          flow(
-            args.validate,
-            Effect.tap(() =>
-              Effect.sync(() =>
-                Store.update(_ => ({ value: _.value, error: null })),
-              ),
-            ),
-            Effect.tapError(error =>
-              Effect.sync(() => Store.update(_ => ({ value: _.value, error }))),
-            ),
-            Effect.mapError(error => new ValidationError({ error })),
-          ),
-        ),
-      )
-    return {
-      ...actions,
-      validate,
-      check: () => validate().pipe(Effect.either, Effect.runPromise),
-      setStateFromData: data => actions.setStateFromData(args.fromData(data)),
-    }
-  })
-
-export const transformFieldSchema = <A, A1, I, E1>(
-  self: FormField<A1, I, E1>,
-  schema: Schema.Schema<A, A1>,
-): FormField<A, I, E1 | ParseError> =>
-  transformField(self, {
-    validate: Schema.decode(schema),
-    fromData: Schema.encodeSync(schema),
-  })
-
-export const validateField = <A1, A extends A1, I, E, E1>(
-  self: FormField<A1, I, E1>,
-  validate: (value: NoInfer<A1>) => Effect.Effect<A, E>,
-): FormField<A, I, E | E1> =>
-  transformField(self, { validate, fromData: _ => _ })
+export * from './Error.js'
+export * as Field from './Field/index.js'
 
 export const Struct = <
   Fields extends Record<
@@ -296,7 +172,7 @@ export const TaggedUnion = <
   }
 
   return mapActions(
-    make<InternalState>()({
+    withState<InternalState>().make({
       initialState: {
         [tagKey]: { value: initialTag, error: null },
         ...Object.fromEntries(
@@ -410,7 +286,7 @@ export const Array = <
     Item extends StateMachine<infer State, infer Actions> ? State : never
   type ItemActions =
     Item extends StateMachine<infer State, infer Actions> ? Actions : never
-  return make<ReadonlyArray<ItemState>>()({
+  return withState<ReadonlyArray<ItemState>>().make({
     initialState: [],
     actions: ({ Store }) => {
       const getItemActions = (index: number): ItemActions =>
@@ -452,16 +328,3 @@ export const Array = <
     },
   }) as any
 }
-
-export const String = field('')
-
-export const NonEmptyString = transformField(String, {
-  validate: _ => Schema.decodeOption(Schema.NonEmptyString)(_),
-  fromData: _ => _,
-})
-
-export const TrimNonEmptyString = transformField(String, {
-  validate: _ =>
-    Schema.decodeOption(Schema.compose(Schema.Trim, Schema.NonEmptyString))(_),
-  fromData: _ => _,
-})

@@ -43,10 +43,14 @@ export type AnyStateMachineWithActions<Actions extends AnyStateActions> = {
   onUpdate?: (state: any) => void | Promise<void>
 }
 
-export const make =
-  <State>() =>
-  <Actions extends AnyStateActions>(args: StateMachine<State, Actions>) =>
-    args
+export const make = <State, Actions extends AnyStateActions>(
+  args: StateMachine<State, Actions>,
+) => args
+
+export const withState = <State>() => ({
+  make: <Actions extends AnyStateActions>(args: StateMachine<State, Actions>) =>
+    args,
+})
 
 export type PreparedStateActions<Actions extends AnyStateActions> = Actions
 
@@ -63,7 +67,7 @@ export const mapActions = <
   self: StateMachine<State, Actions>,
   f: (actions: Actions, machine: { Store: Store<State> }) => NextActions,
 ): StateMachine<State, NextActions> =>
-  make<State>()({
+  make({
     ...self,
     actions: machine => ({ ...f(self.actions(machine), machine) }),
   })

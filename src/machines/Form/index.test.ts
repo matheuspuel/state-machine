@@ -2,14 +2,13 @@ import { describe, expect, it } from '@effect/vitest'
 import { Form, StateMachine } from '@matheuspuel/state-machine'
 import { Effect } from 'effect'
 import { NoSuchElementException } from 'effect/Cause'
-import { ValidationError } from './Form.js'
+import { ValidationError } from './index.js'
 
 describe('Form', () => {
   it('should work', () => {
-    const formField = Form.transformField(Form.field(0), {
-      validate: _ =>
-        _ > 1 ? Effect.succeed({ n: _ }) : Effect.fail('low' as const),
-      fromData: (data: { n: number }) => data.n,
+    const formField = Form.Field.of(0).parse({
+      to: _ => (_ > 1 ? Effect.succeed({ n: _ }) : Effect.fail('low' as const)),
+      from: (data: { n: number }) => data.n,
     })
     const machine = Form.Struct({
       a: formField,
@@ -66,8 +65,8 @@ describe('Form', () => {
 
   it('TaggedUnion', () => {
     const stateMachine = Form.TaggedUnion('_tag', {
-      A: Form.Struct({ a: Form.field(0), x: Form.field('') }),
-      B: Form.Struct({ b: Form.field(0), x: Form.field('') }),
+      A: Form.Struct({ a: Form.Field.of(0), x: Form.Field.of('') }),
+      B: Form.Struct({ b: Form.Field.of(0), x: Form.Field.of('') }),
     })
     const form = StateMachine.run(stateMachine)
     const getState = () => form.ref.get.pipe(Effect.runSync)
@@ -96,7 +95,7 @@ describe('Form', () => {
 
   it('Array', () => {
     const stateMachine = Form.Struct({
-      list: Form.Array(Form.Struct({ a: Form.NonEmptyString })),
+      list: Form.Array(Form.Struct({ a: Form.Field.NonEmptyString })),
     })
     const form = StateMachine.run(stateMachine)
     const getState = () => form.ref.get.pipe(Effect.runSync)
@@ -137,11 +136,11 @@ describe('Form', () => {
 
   it('change password example', () => {
     const stateMachine = Form.Struct({
-      oldPassword: Form.field(''),
+      oldPassword: Form.Field.of(''),
       newPassword: StateMachine.mapActions(
         Form.Struct({
-          password: Form.field(''),
-          confirmation: Form.fieldWithError<'not-match'>()(Form.field('')),
+          password: Form.Field.of(''),
+          confirmation: Form.Field.of('').withError<'not-match'>(),
         }),
         actions => ({
           ...actions,

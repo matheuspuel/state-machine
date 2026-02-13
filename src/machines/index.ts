@@ -1,4 +1,3 @@
-export * as Form from './Form.js'
-export { of } from './of.js'
+export * from './basic.js'
+export * as Form from './Form/index.js'
 export { QueryState, trackEffect } from './QueryState.js'
-export { Struct } from './Struct.js'
