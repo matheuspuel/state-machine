@@ -41,10 +41,16 @@ export type FormField<A, I, E> = FormFieldBase<A, I, E> & {
       makeError: (error: ParseError) => E2,
     ): FormField<A2, I, E | E2>
   }
-  filter: <E2>(
-    predicate: (value: A) => boolean,
-    onFail: (value: A) => E2,
-  ) => FormField<A, I, E | E2>
+  filter: {
+    <A2 extends A, E2>(
+      refinement: (value: A) => value is A2,
+      onFail: (value: A) => E2,
+    ): FormField<A2, I, E | E2>
+    <E2>(
+      predicate: (value: A) => boolean,
+      onFail: (value: A) => E2,
+    ): FormField<A, I, E | E2>
+  }
   required: () => FormField<NonNullable<A>, I, E | NoSuchElementException>
 }
 
@@ -138,7 +144,10 @@ const addExtraProperties = <A, I, E>(
     }
   }
 
-  const filter: FormField<A, I, E>['filter'] = (predicate, onFail) =>
+  const filter: FormField<A, I, E>['filter'] = <A2 extends A, E2>(
+    predicate: ((value: A) => value is A2) | ((value: A) => boolean),
+    onFail: (value: A) => E2,
+  ) =>
     parse(value =>
       predicate(value) ? Effect.succeed(value) : Effect.fail(onFail(value)),
     )
