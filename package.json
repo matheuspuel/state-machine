@@ -31,7 +31,7 @@
     "@matheuspuel/optic": "^0.3.0",
     "@matheuspuel/query-state": "^0.3.0",
     "effect": "^3.19.16",
-    "react": "19.1.0",
+    "react": "^19.1.0",
     "use-sync-external-store": "^1.5.0"
   },
   "devDependencies": {
@@ -39,7 +39,7 @@
     "@effect/vitest": "^0.27.0",
     "@matheuspuel/state-machine": "file:.",
     "@types/node": "^25.0.8",
-    "@types/react": "~19.1.17",
+    "@types/react": "^19.1.17",
     "@types/use-sync-external-store": "^1.5.0",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",

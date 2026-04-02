@@ -18,7 +18,7 @@ importers:
         specifier: ^3.19.16
         version: 3.19.16
       react:
-        specifier: 19.1.0
+        specifier: ^19.1.0
         version: 19.1.0
       use-sync-external-store:
         specifier: ^1.5.0
@@ -37,7 +37,7 @@ importers:
         specifier: ^25.0.8
         version: 25.0.8
       '@types/react':
-        specifier: ~19.1.17
+        specifier: ^19.1.17
         version: 19.1.17
       '@types/use-sync-external-store':
         specifier: ^1.5.0
