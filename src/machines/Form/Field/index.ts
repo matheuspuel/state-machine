@@ -60,7 +60,7 @@ const addExtraProperties = <A, I, E>(
   self: FormFieldBase<A, I, E>,
 ): FormField<A, I, E> => {
   const withError = <E2>(): FormField<A, I, E2 | E> =>
-    self as FormField<A, I, E2 | E>
+    addExtraProperties(self) as FormField<A, I, E2 | E>
 
   const parse: FormField<A, I, E>['parse'] = <A2, E2>(
     args:

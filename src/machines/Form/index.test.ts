@@ -63,6 +63,13 @@ describe('Form', () => {
     })
   })
 
+  it('add extra properties after .withError', () => {
+    Form.Field.String.withError<'CustomError'>().transform({
+      to: _ => _,
+      from: _ => _,
+    })
+  })
+
   it('TaggedUnion', () => {
     const stateMachine = Form.TaggedUnion('_tag', {
       A: Form.Struct({ a: Form.Field.of(0), x: Form.Field.of('') }),
