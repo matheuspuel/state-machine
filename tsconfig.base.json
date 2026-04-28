@@ -7,7 +7,6 @@
     "strict": true,
     "exactOptionalPropertyTypes": true,
     "moduleDetection": "force",
-    "composite": true,
     "downlevelIteration": true,
     "resolveJsonModule": true,
     "esModuleInterop": false,
@@ -29,7 +28,6 @@
     "noImplicitThis": true,
     "noUncheckedIndexedAccess": true,
     "strictNullChecks": true,
-    "incremental": true,
     "removeComments": false,
     "jsx": "react-jsx",
     "plugins": [{ "name": "@effect/language-service" }]
