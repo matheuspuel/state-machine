@@ -1,10 +1,10 @@
 import { QueryState as QueryState_ } from '@matheuspuel/query-state'
 import { DateTime, Effect, pipe, Schedule } from 'effect'
-import { make, mapActions, StateMachine } from '../definition.js'
+import { make, StateMachine } from '../definition.js'
 import { of } from './basic.js'
 
 export const QueryState = <A, E, P = undefined>() =>
-  mapActions(of(QueryState_.initial<A, E, P>()), actions => ({
+  of(QueryState_.initial<A, E, P>()).mapActions(actions => ({
     ...actions,
     start: (loading: { progress: P }) =>
       actions.update(_ =>
@@ -65,7 +65,7 @@ export const trackEffect: {
   }
 > =>
   pipe(
-    mapActions(QueryState<A, E, P>(), actions => ({
+    QueryState<A, E, P>().mapActions(actions => ({
       ...actions,
       submit: (input: I) =>
         QueryState_.trackEffect(actions.update, effect, {

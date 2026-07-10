@@ -144,28 +144,25 @@ describe('Form', () => {
   it('change password example', () => {
     const stateMachine = Form.Struct({
       oldPassword: Form.Field.of(''),
-      newPassword: StateMachine.mapActions(
-        Form.Struct({
-          password: Form.Field.of(''),
-          confirmation: Form.Field.of('').withError<'not-match'>(),
-        }),
-        actions => ({
-          ...actions,
-          validate: () =>
-            Effect.gen(function* () {
-              const result = yield* actions.validate()
-              if (result.password !== result.confirmation) {
-                actions.confirmation.error.set('not-match' as const)
-                return yield* new ValidationError({
-                  error: 'not-match' as const,
-                })
-              }
-              return result.password
-            }),
-          setStateFromData: (password: string) =>
-            actions.setStateFromData({ password, confirmation: password }),
-        }),
-      ),
+      newPassword: Form.Struct({
+        password: Form.Field.of(''),
+        confirmation: Form.Field.of('').withError<'not-match'>(),
+      }).mapActions(actions => ({
+        ...actions,
+        validate: () =>
+          Effect.gen(function* () {
+            const result = yield* actions.validate()
+            if (result.password !== result.confirmation) {
+              actions.confirmation.error.set('not-match' as const)
+              return yield* new ValidationError({
+                error: 'not-match' as const,
+              })
+            }
+            return result.password
+          }),
+        setStateFromData: (password: string) =>
+          actions.setStateFromData({ password, confirmation: password }),
+      })),
     })
     const form = StateMachine.run(stateMachine)
     const getState = () => form.ref.get.pipe(Effect.runSync)

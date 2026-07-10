@@ -74,7 +74,7 @@ const addExtraProperties = <A, I, E>(
     const from =
       typeof args === 'function' ? (_: A2) => _ as unknown as A : args.from
     return addExtraProperties<A2, I, E2 | E>(
-      StateMachine.mapActions(withError<E2>(), (actions, { Store }) => {
+      withError<E2>().mapActions((actions, { Store }) => {
         const validate = (): Effect.Effect<
           A2,
           ValidationError<E2 | E>,

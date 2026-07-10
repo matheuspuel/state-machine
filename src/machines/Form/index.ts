@@ -3,7 +3,6 @@
 import { Effect, Either, Option, pipe, Record } from 'effect'
 import {
   AnyStateMachineWithActions,
-  mapActions,
   StateMachine,
   withState,
 } from '../../definition.js'
@@ -72,7 +71,7 @@ export const Struct = <
     }) => void
   }
 > =>
-  mapActions(StateMachineStruct<Fields>(fields), actions => ({
+  StateMachineStruct<Fields>(fields).mapActions(actions => ({
     ...actions,
     setStateFromData: data => {
       Object.keys(fields).map(key =>
@@ -171,8 +170,8 @@ export const TaggedUnion = <
       : never
   }
 
-  return mapActions(
-    withState<InternalState>().make({
+  return withState<InternalState>()
+    .make({
       initialState: {
         [tagKey]: { value: initialTag, error: null },
         ...Object.fromEntries(
@@ -231,8 +230,8 @@ export const TaggedUnion = <
           },
         }
       },
-    }),
-    actions => {
+    })
+    .mapActions(actions => {
       const flatActions = Object.fromEntries(
         variantKeys.map(key => [key, actions[key as keyof typeof actions]]),
       )
@@ -242,8 +241,7 @@ export const TaggedUnion = <
         validate: actions.validate,
         setStateFromData: actions.setStateFromData,
       } as any
-    },
-  ) as any
+    }) as any
 }
 
 export const Array = <
