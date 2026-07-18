@@ -2,7 +2,6 @@ import { describe, expect, it } from '@effect/vitest'
 import { Form, StateMachine } from '@matheuspuel/state-machine'
 import { Effect } from 'effect'
 import { NoSuchElementException } from 'effect/Cause'
-import { ValidationError } from './index.js'
 
 describe('Form', () => {
   it('should work', () => {
@@ -154,7 +153,7 @@ describe('Form', () => {
             const result = yield* actions.validate()
             if (result.password !== result.confirmation) {
               actions.confirmation.error.set('not-match' as const)
-              return yield* new ValidationError({
+              return yield* new Form.ValidationError({
                 error: 'not-match' as const,
               })
             }

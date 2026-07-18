@@ -40,13 +40,27 @@ export type StateMachineProperties<State, Actions extends AnyStateActions> = {
   onUpdate?: (state: State) => void | Promise<void>
 }
 
-export type StateMachine<
-  State,
-  Actions extends AnyStateActions,
-> = StateMachineProperties<State, Actions> & {
-  mapActions: <NextActions extends AnyStateActions>(
+export class StateMachine<State, Actions extends AnyStateActions> {
+  initialState: State
+  actions: (machine: { Store: Store<State> }) => Actions
+  start?: (machine: { Store: Store<State> }) => undefined | Promise<unknown>
+  onUpdate?: (state: State) => void | Promise<void>
+
+  constructor(properties: StateMachineProperties<State, Actions>) {
+    this.initialState = properties.initialState
+    this.actions = properties.actions
+    if (properties.start) this.start = properties.start
+    if (properties.onUpdate) this.onUpdate = properties.onUpdate
+  }
+
+  mapActions<NextActions extends AnyStateActions>(
     f: (actions: Actions, machine: { Store: Store<State> }) => NextActions,
-  ) => StateMachine<State, NextActions>
+  ): StateMachine<State, NextActions> {
+    return new StateMachine<State, NextActions>({
+      ...this,
+      actions: machine => f(this.actions(machine), machine),
+    })
+  }
 }
 
 export type AnyStateMachineWithActions<Actions extends AnyStateActions> = {
@@ -60,20 +74,13 @@ export type AnyStateMachineWithActions<Actions extends AnyStateActions> = {
 }
 
 export const make = <State, Actions extends AnyStateActions>(
-  args: StateMachineProperties<State, Actions>,
-): StateMachine<State, Actions> => ({
-  ...args,
-  mapActions: f =>
-    make({
-      ...args,
-      actions: machine => ({ ...f(args.actions(machine), machine) }),
-    }),
-})
+  properties: StateMachineProperties<State, Actions>,
+): StateMachine<State, Actions> => new StateMachine(properties)
 
 export const withState = <State>() => ({
   make: <Actions extends AnyStateActions>(
-    args: StateMachineProperties<State, Actions>,
-  ): StateMachine<State, Actions> => make(args),
+    properties: StateMachineProperties<State, Actions>,
+  ): StateMachine<State, Actions> => make(properties),
 })
 
 export type PreparedStateActions<Actions extends AnyStateActions> = Actions

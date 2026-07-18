@@ -3,23 +3,47 @@
 import { Effect, Either, flow, Option, pipe, Schema } from 'effect'
 import { NoSuchElementException } from 'effect/Cause'
 import { ParseError } from 'effect/ParseResult'
-import * as StateMachine from '../../../definition.js'
+import { AnyStateActions, Store } from '../../../definition.js'
 import { ValidationError } from '../Error.js'
+import { Form, FormActions } from '../definition.js'
 
-type FormFieldBase<A, I, E> = StateMachine.StateMachine<
-  { value: I; error: E | null },
-  {
-    set: (value: I) => void
-    update: (f: (previous: I) => I) => void
-    error: { set: (error: E | null) => void }
-    validate: () => Effect.Effect<A, ValidationError<E>>
-    check: () => Promise<Either.Either<A, ValidationError<E>>>
-    setStateFromData: (data: A) => void
+type FormFieldState<A, I, E> = { value: I; error: E | null }
+
+type FormFieldBasicActions<A, I, E> = FormActions<A, I, E> & {
+  set: (value: I) => void
+  update: (f: (previous: I) => I) => void
+  error: { set: (error: E | null) => void }
+  check: () => Promise<Either.Either<A, ValidationError<E>>>
+}
+
+export class FormField<
+  A,
+  I,
+  E,
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  ExtraActions extends AnyStateActions = {},
+> extends Form<
+  A,
+  FormFieldState<A, I, E>,
+  E,
+  FormFieldBasicActions<A, I, E> & ExtraActions
+> {
+  withError<E2>(): FormField<A, I, E2 | E> {
+    return this as FormField<A, I, E2 | E>
   }
->
 
-export type FormField<A, I, E> = FormFieldBase<A, I, E> & {
-  withError: <E2>() => FormField<A, I, E2 | E>
+  mapActions<A2, NextActions extends AnyStateActions>(
+    f: (
+      actions: FormFieldBasicActions<A, I, E> & ExtraActions,
+      machine: { Store: Store<FormFieldState<A2, I, E>> },
+    ) => FormFieldBasicActions<A2, I, E> & NextActions,
+  ): FormField<A2, I, E, NextActions> {
+    return new FormField<A2, I, E, NextActions>({
+      ...this,
+      actions: (machine: any) => f(this.actions(machine), machine),
+    } as any)
+  }
+
   parse: {
     <A2 extends A, E2>(
       to: (value: NoInfer<A>) => Effect.Effect<A2, E2>,
@@ -28,7 +52,46 @@ export type FormField<A, I, E> = FormFieldBase<A, I, E> & {
       to: (value: NoInfer<A>) => Effect.Effect<A2, E2>
       from: (data: A2) => NoInfer<A>
     }): FormField<A2, I, E2 | E>
+  } = <A2, E2>(
+    args:
+      | ((value: NoInfer<A>) => Effect.Effect<A2, E2>)
+      | {
+          to: (value: NoInfer<A>) => Effect.Effect<A2, E2>
+          from: (data: A2) => NoInfer<A>
+        },
+  ): FormField<A2, I, E2 | E> => {
+    const to = typeof args === 'function' ? args : args.to
+    const from =
+      typeof args === 'function' ? (_: A2) => _ as unknown as A : args.from
+    return this.withError<E2>().mapActions((actions, { Store }) => {
+      const validate = (): Effect.Effect<A2, ValidationError<E2 | E>, never> =>
+        actions.validate().pipe(
+          Effect.flatMap(
+            flow(
+              to,
+              Effect.tap(() =>
+                Effect.sync(() =>
+                  Store.update(_ => ({ value: _.value, error: null })),
+                ),
+              ),
+              Effect.tapError(error =>
+                Effect.sync(() =>
+                  Store.update(_ => ({ value: _.value, error })),
+                ),
+              ),
+              Effect.mapError(error => new ValidationError({ error })),
+            ),
+          ),
+        )
+      return {
+        ...actions,
+        validate,
+        check: () => validate().pipe(Effect.either, Effect.runPromise),
+        setStateFromData: data => actions.setStateFromData(from(data)),
+      }
+    })
   }
+
   transform: {
     <A2 extends A>(to: (value: NoInfer<A>) => A2): FormField<A2, I, E>
     <A2>(args: {
@@ -40,75 +103,7 @@ export type FormField<A, I, E> = FormFieldBase<A, I, E> & {
       schema: Schema.Schema<A2, A>,
       makeError: (error: ParseError) => E2,
     ): FormField<A2, I, E | E2>
-  }
-  filter: {
-    <A2 extends A, E2>(
-      refinement: (value: A) => value is A2,
-      onFail: (value: A) => E2,
-    ): FormField<A2, I, E | E2>
-    <E2>(
-      predicate: (value: A) => boolean,
-      onFail: (value: A) => E2,
-    ): FormField<A, I, E | E2>
-  }
-  required: () => FormField<NonNullable<A>, I, E | NoSuchElementException>
-}
-
-export type AnyFormField = FormField<any, any, any>
-
-const addExtraProperties = <A, I, E>(
-  self: FormFieldBase<A, I, E>,
-): FormField<A, I, E> => {
-  const withError = <E2>(): FormField<A, I, E2 | E> =>
-    addExtraProperties(self) as FormField<A, I, E2 | E>
-
-  const parse: FormField<A, I, E>['parse'] = <A2, E2>(
-    args:
-      | ((value: NoInfer<A>) => Effect.Effect<A2, E2>)
-      | {
-          to: (value: NoInfer<A>) => Effect.Effect<A2, E2>
-          from: (data: A2) => NoInfer<A>
-        },
-  ): FormField<A2, I, E2 | E> => {
-    const to = typeof args === 'function' ? args : args.to
-    const from =
-      typeof args === 'function' ? (_: A2) => _ as unknown as A : args.from
-    return addExtraProperties<A2, I, E2 | E>(
-      withError<E2>().mapActions((actions, { Store }) => {
-        const validate = (): Effect.Effect<
-          A2,
-          ValidationError<E2 | E>,
-          never
-        > =>
-          actions.validate().pipe(
-            Effect.flatMap(
-              flow(
-                to,
-                Effect.tap(() =>
-                  Effect.sync(() =>
-                    Store.update(_ => ({ value: _.value, error: null })),
-                  ),
-                ),
-                Effect.tapError(error =>
-                  Effect.sync(() =>
-                    Store.update(_ => ({ value: _.value, error })),
-                  ),
-                ),
-                Effect.mapError(error => new ValidationError({ error })),
-              ),
-            ),
-          )
-        return {
-          ...actions,
-          validate,
-          check: () => validate().pipe(Effect.either, Effect.runPromise),
-          setStateFromData: data => actions.setStateFromData(from(data)),
-        }
-      }),
-    )
-  }
-
-  const transform: FormField<A, I, E>['transform'] = <A2, E2>(
+  } = <A2, E2>(
     args:
       | ((value: NoInfer<A>) => A2)
       | {
@@ -120,7 +115,7 @@ const addExtraProperties = <A, I, E>(
   ): FormField<A2, I, any> => {
     if (Schema.isSchema(args)) {
       const schema = args as Schema.Schema<A2, A>
-      return parse({
+      return this.parse({
         to: value =>
           Effect.mapError(Schema.decode(schema)(value), parseError =>
             (makeError ?? (_ => _))(parseError),
@@ -129,13 +124,13 @@ const addExtraProperties = <A, I, E>(
       })
     } else if (typeof args === 'function') {
       const to = args
-      return parse({
+      return this.parse({
         to: _ => Effect.succeed(to(_)),
         from: (_: A2) => _ as unknown as A,
       })
     } else if ('to' in args) {
       const { to, from } = args
-      return parse({
+      return this.parse({
         to: _ => Effect.succeed(to(_)),
         from: from,
       })
@@ -144,65 +139,69 @@ const addExtraProperties = <A, I, E>(
     }
   }
 
-  const filter: FormField<A, I, E>['filter'] = <A2 extends A, E2>(
+  filter: {
+    <A2 extends A, E2>(
+      refinement: (value: A) => value is A2,
+      onFail: (value: A) => E2,
+    ): FormField<A2, I, E | E2>
+    <E2>(
+      predicate: (value: A) => boolean,
+      onFail: (value: A) => E2,
+    ): FormField<A, I, E | E2>
+  } = <A2 extends A, E2>(
     predicate: ((value: A) => value is A2) | ((value: A) => boolean),
     onFail: (value: A) => E2,
   ) =>
-    parse(value =>
+    this.parse(value =>
       predicate(value) ? Effect.succeed(value) : Effect.fail(onFail(value)),
     )
 
-  return {
-    ...self,
-    withError,
-    parse,
-    transform,
-    filter,
-    required: () => parse(Option.fromNullable),
+  required(): FormField<NonNullable<A>, I, E | NoSuchElementException> {
+    return this.parse(Option.fromNullable)
   }
 }
+
+export type AnyFormField = FormField<any, any, any>
 
 export const make = <A, I, E>(args: {
   initial: I
   validate: (value: I) => Effect.Effect<A, E>
   fromData: (data: A) => I
 }): FormField<A, I, E> =>
-  addExtraProperties(
-    StateMachine.withState<{ value: I; error: E | null }>().make({
-      initialState: { value: args.initial, error: null },
-      actions: ({ Store }) => {
-        const validate = () =>
-          pipe(
-            Store.get().value,
-            args.validate,
-            Effect.tap(() =>
-              Effect.sync(() =>
-                Store.update(_ => ({ value: _.value, error: null })),
-              ),
+  new FormField<A, I, E>({
+    initialState: { value: args.initial, error: null },
+    actions: ({ Store }) => {
+      const validate = () =>
+        pipe(
+          Store.get().value,
+          args.validate,
+          Effect.tap(() =>
+            Effect.sync(() =>
+              Store.update(_ => ({ value: _.value, error: null })),
             ),
-            Effect.tapError(error =>
-              Effect.sync(() => Store.update(_ => ({ value: _.value, error }))),
-            ),
-            Effect.mapError(error => new ValidationError({ error })),
-          )
-        return {
-          set: value => Store.update(() => ({ value, error: null })),
-          update: f => Store.update(_ => ({ value: f(_.value), error: null })),
-          error: {
-            set: error => Store.update(_ => ({ value: _.value, error })),
-          },
-          validate,
-          check: () => validate().pipe(Effect.either, Effect.runPromise),
-          setStateFromData: data =>
-            Store.update(_ => ({
-              ..._,
-              value: args.fromData(data),
-              error: null,
-            })),
-        }
-      },
-    }),
-  )
+          ),
+          Effect.tapError(error =>
+            Effect.sync(() => Store.update(_ => ({ value: _.value, error }))),
+          ),
+          Effect.mapError(error => new ValidationError({ error })),
+        )
+      return {
+        set: value => Store.update(() => ({ value, error: null })),
+        update: f => Store.update(_ => ({ value: f(_.value), error: null })),
+        error: {
+          set: error => Store.update(_ => ({ value: _.value, error })),
+        },
+        validate,
+        check: () => validate().pipe(Effect.either, Effect.runPromise),
+        setStateFromData: data =>
+          Store.update(_ => ({
+            ..._,
+            value: args.fromData(data),
+            error: null,
+          })),
+      }
+    },
+  })
 
 export const of = <A>(initial: A): FormField<A, A, never> =>
   make<A, A, never>({
