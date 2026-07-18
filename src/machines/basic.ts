@@ -1,4 +1,5 @@
-import { Array as Array_, Record } from 'effect'
+import { Array as Array_, Record as Record_ } from 'effect'
+import { ReadonlyRecord } from 'effect/Record'
 import {
   AnyStateActions,
   make,
@@ -44,9 +45,9 @@ export const Struct = <
         : never
     }
   >({
-    initialState: Record.map(fields, _ => _.initialState) as any,
+    initialState: Record_.map(fields, _ => _.initialState) as any,
     actions: ({ Store }) => ({
-      ...(Record.map(fields, (_, key) =>
+      ...(Record_.map(fields, (_, key) =>
         _.actions({
           Store: makeStore({
             get: () => Store.get()[key],
@@ -134,3 +135,96 @@ export const Array: {
       },
     }),
   })
+
+type RecordActions<K, A, ItemActions extends AnyStateActions> = {
+  insert: (key: K, value: A) => void
+  remove: (key: K) => void
+  key: (key: K) => ItemActions | null
+  find: (predicate: (item: A, key: K) => boolean) => ItemActions | null
+}
+
+type RecordWithKeyExtractorActions<
+  K,
+  A,
+  ItemActions extends AnyStateActions,
+> = {
+  insert: (value: A) => void
+  remove: (key: K) => void
+  key: (key: K) => ItemActions | null
+  find: (predicate: (item: A, key: K) => boolean) => ItemActions | null
+}
+
+export const Record: {
+  <K extends string | symbol, A, ItemActions extends AnyStateActions>(
+    field: StateMachineWithoutInitialState<A, ItemActions>,
+    options: { getKey: (item: A) => K },
+  ): StateMachine<
+    ReadonlyRecord<K, A>,
+    RecordWithKeyExtractorActions<K, A, ItemActions>
+  >
+  <K extends string | symbol, A, ItemActions extends AnyStateActions>(
+    field: StateMachineWithoutInitialState<A, ItemActions>,
+  ): StateMachine<ReadonlyRecord<K, A>, RecordActions<K, A, ItemActions>>
+} & {
+  keyType: <K extends string | symbol>() => <
+    A,
+    ItemActions extends AnyStateActions,
+  >(
+    field: StateMachineWithoutInitialState<A, ItemActions>,
+  ) => StateMachine<ReadonlyRecord<K, A>, RecordActions<K, A, ItemActions>>
+} = <K extends string | symbol, A, ItemActions extends AnyStateActions>(
+  field: StateMachineWithoutInitialState<A, ItemActions>,
+  options?: { getKey?: (item: A) => K },
+): StateMachine<
+  ReadonlyRecord<K, A>,
+  RecordActions<K, A, ItemActions> &
+    RecordWithKeyExtractorActions<K, A, ItemActions>
+> =>
+  type<ReadonlyRecord<K, A>>().make({
+    initialState: {} as ReadonlyRecord<K, A>,
+    actions: ({ Store }) => ({
+      ...((options?.getKey
+        ? {
+            insert: (value: A) =>
+              Store.update(_ => ({ ..._, [options.getKey!(value)]: value })),
+          }
+        : {
+            insert: (key: K, value: A) =>
+              Store.update(_ => ({ ..._, [key]: value })),
+          }) as { insert: (key: K, value: A) => void } & {
+        insert: (value: A) => void
+      }),
+      remove: (key: K) =>
+        Store.update(_ => Record_.remove(_, key) as ReadonlyRecord<K, A>),
+      key: (key: K) => {
+        const state = Store.get()
+        if (!(key in state)) return null
+        return field.actions({
+          Store: makeStore<A>({
+            get: () => state[key],
+            update: f => Store.update(_ => ({ ..._, [key]: f(state[key]) })),
+          }),
+        })
+      },
+      find: (predicate: (item: A, key: K) => boolean) => {
+        const state = Store.get()
+        const key = (Object.keys(state) as K[]).find(k =>
+          predicate(state[k], k),
+        )
+        if (key === undefined) return null
+        return field.actions({
+          Store: makeStore<A>({
+            get: () => state[key],
+            update: f => Store.update(_ => ({ ..._, [key]: f(state[key]) })),
+          }),
+        })
+      },
+    }),
+  })
+
+Record.keyType =
+  <K extends string | symbol>() =>
+  <A, ItemActions extends AnyStateActions>(
+    field: StateMachineWithoutInitialState<A, ItemActions>,
+  ) =>
+    Record<K, A, ItemActions>(field)

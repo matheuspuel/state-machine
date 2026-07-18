@@ -62,4 +62,57 @@ describe('Struct', () => {
       expect(getState()).toStrictEqual([11, 0])
     })
   })
+
+  describe('Record', () => {
+    it('with key type', () => {
+      type Id = string & { brand: 'Id' }
+      const makeId = (value: string) => value as Id
+      const machine = StateMachine.Record.keyType<Id>()(StateMachine.of(0))
+      const instance = StateMachine.run(machine)
+      const getState = () => instance.ref.get.pipe(Effect.runSync)
+      expect(getState()).toStrictEqual({})
+      instance.actions.insert(makeId('a'), 1)
+      expect(getState()).toStrictEqual({ a: 1 })
+      instance.actions.insert(makeId('b'), 0)
+      instance.actions.insert(makeId('b'), 2)
+      expect(getState()).toStrictEqual({ a: 1, b: 2 })
+      expect(instance.actions.key(makeId('a'))?.get()).toStrictEqual(1)
+      expect(instance.actions.key(makeId('c'))).toStrictEqual(null)
+      expect(
+        instance.actions.find((v, k) => v === 2 && k === makeId('b'))?.get(),
+      ).toStrictEqual(2)
+      instance.actions.key(makeId('a'))?.update(_ => _ + 10)
+      expect(getState()).toStrictEqual({ a: 11, b: 2 })
+      instance.actions.key(makeId('b'))?.set(22)
+      expect(getState()).toStrictEqual({ a: 11, b: 22 })
+      instance.actions.remove(makeId('b'))
+      expect(getState()).toStrictEqual({ a: 11 })
+    })
+
+    it('with key extractor', () => {
+      type Id = string & { brand: 'Id' }
+      const makeId = (value: string) => value as Id
+      const machine = StateMachine.Record(StateMachine.of(0), {
+        getKey: _ => makeId(_.toString()),
+      })
+      const instance = StateMachine.run(machine)
+      const getState = () => instance.ref.get.pipe(Effect.runSync)
+      expect(getState()).toStrictEqual({})
+      instance.actions.insert(1)
+      expect(getState()).toStrictEqual({ '1': 1 })
+      instance.actions.insert(2)
+      expect(getState()).toStrictEqual({ '1': 1, '2': 2 })
+      expect(instance.actions.key(makeId('1'))?.get()).toStrictEqual(1)
+      expect(instance.actions.key(makeId('3'))).toStrictEqual(null)
+      expect(
+        instance.actions.find((v, k) => v === 2 && k === makeId('2'))?.get(),
+      ).toStrictEqual(2)
+      instance.actions.key(makeId('1'))?.update(_ => _ + 10)
+      expect(getState()).toStrictEqual({ '1': 11, '2': 2 })
+      instance.actions.key(makeId('2'))?.set(22)
+      expect(getState()).toStrictEqual({ '1': 11, '2': 22 })
+      instance.actions.remove(makeId('2'))
+      expect(getState()).toStrictEqual({ '1': 11 })
+    })
+  })
 })
