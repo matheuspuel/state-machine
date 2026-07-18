@@ -1,4 +1,4 @@
-export { make, withState } from './definition.js'
+export { make, type } from './definition.js'
 export type { StateMachine } from './definition.js'
 export * from './machines/index.js'
 export { run } from './runtime/index.js'

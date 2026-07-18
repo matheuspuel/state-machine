@@ -6,7 +6,7 @@ import {
   makeStore,
   StateMachine,
   Store,
-  withState,
+  type,
 } from '../../definition.js'
 import { Struct as StateMachineStruct } from '../basic.js'
 import { ValidationError } from './Error.js'
@@ -173,7 +173,7 @@ export const TaggedUnion = <
       : never
   }
 
-  return withState<InternalState>()
+  return type<InternalState>()
     .make({
       initialState: {
         [tagKey]: { value: initialTag, error: null },
@@ -273,7 +273,7 @@ export const Array = <Item extends Form<any, any, any, any>>(
     Item extends Form<infer A, infer I, infer E, infer Actions>
       ? Actions
       : never
-  return withState<ReadonlyArray<ItemState>>().make({
+  return type<ReadonlyArray<ItemState>>().make({
     initialState: [],
     actions: ({ Store }) => {
       const getItemActions = (index: number): ItemActions =>
