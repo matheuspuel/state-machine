@@ -34,6 +34,43 @@ export class Form<
       actions: machine => f(this.actions(machine), machine),
     })
   }
+
+  mapData: {
+    <A2 extends A>(to: (value: NoInfer<A>) => A2): Form<A2, I, E>
+    <A2>(args: {
+      to: (value: NoInfer<A>) => A2
+      from: (data: A2) => NoInfer<A>
+    }): Form<A2, I, E>
+  } = <A2>(
+    args:
+      | ((value: NoInfer<A>) => A2)
+      | {
+          to: (value: NoInfer<A>) => A2
+          from: (data: A2) => NoInfer<A>
+        },
+  ): Form<A2, I, any> => {
+    let to
+    let from
+    if (typeof args === 'function') {
+      to = args
+      from = (data: A2) => data as unknown as A
+    } else if ('to' in args) {
+      to = args.to
+      from = args.from
+    } else {
+      throw new Error('Invalid arguments')
+    }
+    return this.mapActions(actions => {
+      const validate = (): Effect.Effect<A2, ValidationError<E>, never> =>
+        Effect.map(actions.validate(), to)
+      return {
+        ...actions,
+        validate,
+        check: () => validate().pipe(Effect.either, Effect.runPromise),
+        setStateFromData: (data: A2) => actions.setStateFromData(from(data)),
+      }
+    })
+  }
 }
 
 export const Struct = <Fields extends Record<string, Form<any, any, any, any>>>(

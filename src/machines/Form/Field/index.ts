@@ -92,6 +92,37 @@ export class FormField<
     })
   }
 
+  mapData: {
+    <A2 extends A>(to: (value: NoInfer<A>) => A2): FormField<A2, I, E>
+    <A2>(args: {
+      to: (value: NoInfer<A>) => A2
+      from: (data: A2) => NoInfer<A>
+    }): FormField<A2, I, E>
+  } = <A2>(
+    args:
+      | ((value: NoInfer<A>) => A2)
+      | {
+          to: (value: NoInfer<A>) => A2
+          from: (data: A2) => NoInfer<A>
+        },
+  ): FormField<A2, I, any> => {
+    if (typeof args === 'function') {
+      const to = args
+      return this.parse({
+        to: _ => Effect.succeed(to(_)),
+        from: (_: A2) => _ as unknown as A,
+      })
+    } else if ('to' in args) {
+      const { to, from } = args
+      return this.parse({
+        to: _ => Effect.succeed(to(_)),
+        from: from,
+      })
+    } else {
+      throw new Error('Invalid arguments')
+    }
+  }
+
   transform: {
     <A2 extends A>(to: (value: NoInfer<A>) => A2): FormField<A2, I, E>
     <A2>(args: {
