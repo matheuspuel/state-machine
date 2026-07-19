@@ -31,11 +31,17 @@ export const of: {
     actions: ({ Store }) => makeBasicActions({ Store }),
   })
 
+type BooleanActions = BasicActions<boolean> & {
+  toggle: () => void
+}
+
 export const Boolean = (initialState: boolean = false) =>
-  of(initialState).mapActions(actions => ({
-    ...actions,
-    toggle: () => actions.update(_ => !_),
-  }))
+  of(initialState).mapActions(
+    (actions): BooleanActions => ({
+      ...actions,
+      toggle: () => actions.update(_ => !_),
+    }),
+  )
 
 export const String = (initialState: string = '') => of(initialState)
 
