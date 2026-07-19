@@ -182,7 +182,12 @@ type ArrayActions<A, ItemActions extends AnyStateActions> = BasicActions<
   readonly A[]
 > & {
   append: (value: A) => void
-  remove: (index: number) => void
+  prepend: (value: A) => void
+  remove: {
+    (index: number): void
+    // eslint-disable-next-line @typescript-eslint/unified-signatures
+    (predicate: (item: A, index: number) => boolean): void
+  }
   index: (index: number) => ItemActions | null
   find: (predicate: (item: A) => boolean) => ItemActions | null
 }
@@ -192,7 +197,10 @@ export const Array: {
     field: StateMachine<A, ItemActions>,
   ): StateMachine<
     readonly A[],
-    ArrayActions<A, ItemActions> & { appendInitial: () => void }
+    ArrayActions<A, ItemActions> & {
+      appendInitial: () => void
+      prependInitial: () => void
+    }
   >
   <A, ItemActions extends AnyStateActions>(
     field: StateMachineWithoutInitialState<A, ItemActions>,
@@ -207,14 +215,25 @@ export const Array: {
     actions: ({ Store }) => ({
       ...makeBasicActions({ Store }),
       append: (value: A) => Store.update(_ => [..._, value]),
+      prepend: (value: A) => Store.update(_ => [value, ..._]),
       appendInitial: () =>
         Store.update(_ => [
           ..._,
           (field as Extract<typeof field, { initialState: unknown }>)
             .initialState,
         ]),
-      remove: (index: number) =>
-        Store.update(_ => [..._.slice(0, index), ..._.slice(index + 1)]),
+      prependInitial: () =>
+        Store.update(_ => [
+          (field as Extract<typeof field, { initialState: unknown }>)
+            .initialState,
+          ..._,
+        ]),
+      remove: (
+        indexOrPredicate: number | ((item: A, index: number) => boolean),
+      ) =>
+        typeof indexOrPredicate === 'number'
+          ? Store.update(_ => Array_.remove(_, indexOrPredicate))
+          : Store.update(_ => _.filter((v, i) => !indexOrPredicate(v, i))),
       index: (index: number) => {
         const state = Store.get()
         if (index < 0 || index >= state.length) return null
