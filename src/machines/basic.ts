@@ -31,6 +31,16 @@ export const of: {
     actions: ({ Store }) => makeBasicActions({ Store }),
   })
 
+export const Boolean = (initialState: boolean = false) =>
+  of(initialState).mapActions(actions => ({
+    ...actions,
+    toggle: () => actions.update(_ => !_),
+  }))
+
+export const String = (initialState: string = '') => of(initialState)
+
+export const Number = (initialState: number = 0) => of(initialState)
+
 export const Struct: {
   <A extends Record<string, StateMachine<any, AnyStateActions>>>(
     fields: A,
