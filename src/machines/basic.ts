@@ -31,12 +31,10 @@ export const of: {
     actions: ({ Store }) => makeBasicActions({ Store }),
   })
 
-export const Struct = <
-  A extends Record<string, StateMachine<any, AnyStateActions>>,
->(
-  fields: A,
-) =>
-  make<
+export const Struct: {
+  <A extends Record<string, StateMachine<any, AnyStateActions>>>(
+    fields: A,
+  ): StateMachine<
     {
       [K in keyof A]: A[K] extends StateMachine<infer State, any>
         ? State
@@ -55,8 +53,50 @@ export const Struct = <
         },
         keyof BasicActions<unknown>
       >
-  >({
-    initialState: Record_.map(fields, _ => _.initialState) as any,
+  >
+  <
+    A extends Record<
+      string,
+      StateMachineWithoutInitialState<any, AnyStateActions>
+    >,
+  >(
+    fields: A,
+  ): StateMachineWithoutInitialState<
+    {
+      [K in keyof A]: A[K] extends StateMachineWithoutInitialState<
+        infer State,
+        any
+      >
+        ? State
+        : never
+    },
+    BasicActions<{
+      [K in keyof A]: A[K] extends StateMachineWithoutInitialState<
+        infer State,
+        any
+      >
+        ? State
+        : never
+    }> &
+      Omit<
+        {
+          [K in keyof A]: A[K] extends StateMachineWithoutInitialState<
+            any,
+            infer Actions
+          >
+            ? Actions
+            : never
+        },
+        keyof BasicActions<unknown>
+      >
+  >
+} = (
+  fields: Record<string, StateMachineWithoutInitialState<any, AnyStateActions>>,
+) =>
+  make({
+    initialState: Record_.map(fields, _ =>
+      'initialState' in _ ? _.initialState : undefined,
+    ) as any,
     actions: ({ Store }) => ({
       ...(Record_.map(fields, (_, key) =>
         _.actions({
