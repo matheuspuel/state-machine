@@ -42,55 +42,22 @@ export const String = (initialState: string = '') => of(initialState)
 export const Number = (initialState: number = 0) => of(initialState)
 
 export const Struct: {
-  <A extends Record<string, StateMachine<any, AnyStateActions>>>(
-    fields: A,
+  <Fields extends Record<string, StateMachine<any, AnyStateActions>>>(
+    fields: Fields,
   ): StateMachine<
     {
-      [K in keyof A]: A[K] extends StateMachine<infer State, any>
+      [K in keyof Fields]: Fields[K] extends StateMachine<infer State, any>
         ? State
         : never
     },
     BasicActions<{
-      [K in keyof A]: A[K] extends StateMachine<infer State, any>
+      [K in keyof Fields]: Fields[K] extends StateMachine<infer State, any>
         ? State
         : never
     }> &
       Omit<
         {
-          [K in keyof A]: A[K] extends StateMachine<any, infer Actions>
-            ? Actions
-            : never
-        },
-        keyof BasicActions<unknown>
-      >
-  >
-  <
-    A extends Record<
-      string,
-      StateMachineWithoutInitialState<any, AnyStateActions>
-    >,
-  >(
-    fields: A,
-  ): StateMachineWithoutInitialState<
-    {
-      [K in keyof A]: A[K] extends StateMachineWithoutInitialState<
-        infer State,
-        any
-      >
-        ? State
-        : never
-    },
-    BasicActions<{
-      [K in keyof A]: A[K] extends StateMachineWithoutInitialState<
-        infer State,
-        any
-      >
-        ? State
-        : never
-    }> &
-      Omit<
-        {
-          [K in keyof A]: A[K] extends StateMachineWithoutInitialState<
+          [K in keyof Fields]: Fields[K] extends StateMachine<
             any,
             infer Actions
           >
@@ -100,6 +67,43 @@ export const Struct: {
         keyof BasicActions<unknown>
       >
   >
+  <
+    Fields extends Partial<
+      Record<string, StateMachineWithoutInitialState<any, AnyStateActions>>
+    >,
+  >(
+    fields: Fields,
+  ): StateMachineWithoutInitialState<
+    {
+      [K in keyof Fields]: Fields[K] extends StateMachineWithoutInitialState<
+        infer State,
+        any
+      >
+        ? State
+        : never
+    },
+    BasicActions<{
+      [K in keyof Fields]: Fields[K] extends StateMachineWithoutInitialState<
+        infer State,
+        any
+      >
+        ? State
+        : never
+    }> &
+      Omit<
+        {
+          [K in keyof Fields]: Fields[K] extends StateMachineWithoutInitialState<
+            any,
+            infer Actions
+          >
+            ? Actions
+            : never
+        },
+        keyof BasicActions<unknown>
+      >
+  >
+} & {
+  type: typeof Struct_type
 } = (
   fields: Record<string, StateMachineWithoutInitialState<any, AnyStateActions>>,
 ) =>
@@ -139,6 +143,34 @@ export const Struct: {
       )
     },
   })
+
+const Struct_type =
+  <A>() =>
+  <
+    Fields extends Partial<{
+      [K in keyof A]: StateMachineWithoutInitialState<A[K], any>
+    }>,
+  >(
+    fields: Fields,
+  ): StateMachineWithoutInitialState<
+    A,
+    BasicActions<A> &
+      Omit<
+        {
+          [K in keyof Fields &
+            keyof A]: Fields[K] extends StateMachineWithoutInitialState<
+            any,
+            infer Actions
+          >
+            ? Actions
+            : never
+        },
+        keyof BasicActions<unknown>
+      >
+  > =>
+    Struct(fields) as any
+
+Struct.type = Struct_type
 
 type ArrayActions<A, ItemActions extends AnyStateActions> = BasicActions<
   readonly A[]
