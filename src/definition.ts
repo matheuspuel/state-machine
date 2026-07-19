@@ -4,7 +4,7 @@ type IsAny<T> = 0 extends 1 & T ? true : false
 
 export type StoreBase<State> = {
   get: () => State
-  update: (stateUpdate: (_: State) => State) => void
+  update: (stateUpdate: (previous: State) => State) => void
 }
 
 export type Store<State> = StoreBase<State> & {

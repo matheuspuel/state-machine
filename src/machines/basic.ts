@@ -6,6 +6,7 @@ import {
   makeStore,
   StateMachine,
   StateMachineWithoutInitialState,
+  Store,
   type,
 } from '../definition.js'
 
@@ -15,17 +16,19 @@ type BasicActions<A> = {
   set: (value: A) => void
 }
 
+const makeBasicActions = <A>({ Store }: { Store: Store<A> }) => ({
+  get: Store.get,
+  update: Store.update,
+  set: (value: A) => Store.update(() => value),
+})
+
 export const of: {
   <A>(): StateMachineWithoutInitialState<A, BasicActions<A>>
   <A>(initialState: A): StateMachine<A, BasicActions<A>>
 } = <A>(...args: [A] | []) =>
   type<A>().make({
     initialState: args[0]!,
-    actions: ({ Store }) => ({
-      get: Store.get,
-      update: (f: (previous: A) => A) => Store.update(f),
-      set: (value: A) => Store.update(() => value),
-    }),
+    actions: ({ Store }) => makeBasicActions({ Store }),
   })
 
 export const Struct = <
@@ -39,11 +42,19 @@ export const Struct = <
         ? State
         : never
     },
-    {
-      [K in keyof A]: A[K] extends StateMachine<any, infer Actions>
-        ? Actions
+    BasicActions<{
+      [K in keyof A]: A[K] extends StateMachine<infer State, any>
+        ? State
         : never
-    }
+    }> &
+      Omit<
+        {
+          [K in keyof A]: A[K] extends StateMachine<any, infer Actions>
+            ? Actions
+            : never
+        },
+        keyof BasicActions<unknown>
+      >
   >({
     initialState: Record_.map(fields, _ => _.initialState) as any,
     actions: ({ Store }) => ({
@@ -55,6 +66,7 @@ export const Struct = <
           }) as any,
         }),
       ) as any),
+      ...makeBasicActions({ Store }),
     }),
     start: ({ Store }) =>
       Promise.all(
@@ -78,7 +90,9 @@ export const Struct = <
     },
   })
 
-type ArrayActions<A, ItemActions extends AnyStateActions> = {
+type ArrayActions<A, ItemActions extends AnyStateActions> = BasicActions<
+  readonly A[]
+> & {
   append: (value: A) => void
   remove: (index: number) => void
   index: (index: number) => ItemActions | null
@@ -103,6 +117,7 @@ export const Array: {
   type<readonly A[]>().make({
     initialState: [],
     actions: ({ Store }) => ({
+      ...makeBasicActions({ Store }),
       append: (value: A) => Store.update(_ => [..._, value]),
       appendInitial: () =>
         Store.update(_ => [
@@ -136,7 +151,11 @@ export const Array: {
     }),
   })
 
-type RecordActions<K, A, ItemActions extends AnyStateActions> = {
+type RecordActions<
+  K extends string | symbol,
+  A,
+  ItemActions extends AnyStateActions,
+> = BasicActions<ReadonlyRecord<K, A>> & {
   insert: (key: K, value: A) => void
   remove: (key: K) => void
   key: (key: K) => ItemActions | null
@@ -144,10 +163,10 @@ type RecordActions<K, A, ItemActions extends AnyStateActions> = {
 }
 
 type RecordWithKeyExtractorActions<
-  K,
+  K extends string | symbol,
   A,
   ItemActions extends AnyStateActions,
-> = {
+> = BasicActions<ReadonlyRecord<K, A>> & {
   insert: (value: A) => void
   remove: (key: K) => void
   key: (key: K) => ItemActions | null
@@ -183,6 +202,7 @@ export const Record: {
   type<ReadonlyRecord<K, A>>().make({
     initialState: {} as ReadonlyRecord<K, A>,
     actions: ({ Store }) => ({
+      ...makeBasicActions({ Store }),
       ...((options?.getKey
         ? {
             insert: (value: A) =>
