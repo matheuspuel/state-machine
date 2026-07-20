@@ -1,5 +1,5 @@
 export { make, type } from './definition.js'
-export type { StateMachine } from './definition.js'
+export type { AnyStateActions, StateMachine } from './definition.js'
 export * from './machines/index.js'
 export { run } from './runtime/index.js'
 export type { Instance } from './runtime/index.js'
