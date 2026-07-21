@@ -239,7 +239,13 @@ export const Array: {
         if (index < 0 || index >= state.length) return null
         return field.actions({
           Store: makeStore<A>({
-            get: () => state[index]!,
+            get: () => {
+              const state = Store.get()
+              if (index < 0 || index >= state.length) {
+                throw new Error(`Index ${index} is no longer present in state`)
+              }
+              return state[index]!
+            },
             update: f => Store.update(_ => Array_.modify(_, index, f)),
           }),
         })
@@ -250,8 +256,20 @@ export const Array: {
         if (index === -1) return null
         return field.actions({
           Store: makeStore<A>({
-            get: () => state[index]!,
-            update: f => Store.update(_ => Array_.modify(_, index, f)),
+            get: () => {
+              const state = Store.get()
+              const index = state.findIndex(predicate)
+              if (index === -1) {
+                throw new Error(`Item is no longer present in state`)
+              }
+              return state[index]!
+            },
+            update: f => {
+              const state = Store.get()
+              const index = state.findIndex(predicate)
+              if (index === -1) return
+              Store.update(_ => Array_.modify(_, index, f))
+            },
           }),
         })
       },
@@ -328,8 +346,20 @@ export const Record: {
         if (!(key in state)) return null
         return field.actions({
           Store: makeStore<A>({
-            get: () => state[key],
-            update: f => Store.update(_ => ({ ..._, [key]: f(state[key]) })),
+            get: () => {
+              const state = Store.get()
+              if (!(key in state)) {
+                throw new Error(
+                  `Key ${key.toString()} is no longer present in state`,
+                )
+              }
+              return state[key]
+            },
+            update: f => {
+              const state = Store.get()
+              if (!(key in state)) return
+              Store.update(_ => ({ ..._, [key]: f(state[key]) }))
+            },
           }),
         })
       },
@@ -341,8 +371,24 @@ export const Record: {
         if (key === undefined) return null
         return field.actions({
           Store: makeStore<A>({
-            get: () => state[key],
-            update: f => Store.update(_ => ({ ..._, [key]: f(state[key]) })),
+            get: () => {
+              const state = Store.get()
+              const key = (Object.keys(state) as K[]).find(k =>
+                predicate(state[k], k),
+              )
+              if (key === undefined) {
+                throw new Error(`Item is no longer present in state`)
+              }
+              return state[key]
+            },
+            update: f => {
+              const state = Store.get()
+              const key = (Object.keys(state) as K[]).find(k =>
+                predicate(state[k], k),
+              )
+              if (key === undefined) return
+              Store.update(_ => ({ ..._, [key]: f(state[key]) }))
+            },
           }),
         })
       },
