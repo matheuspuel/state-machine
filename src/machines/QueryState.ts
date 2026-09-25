@@ -30,7 +30,8 @@ export const trackEffect: {
     options: {
       initialProgress: P
       runOnStart?: { input: I } | (I extends void ? true : never)
-      retry?: Schedule.Schedule<any, E>
+      retry?: Schedule.Schedule<unknown, E>
+      repeat?: Schedule.Schedule<unknown, A>
     },
   ): StateMachine<
     QueryState_<A, E, P>,
@@ -43,7 +44,8 @@ export const trackEffect: {
     options?: {
       initialProgress?: undefined
       runOnStart?: { input: I } | (I extends void ? true : never)
-      retry?: Schedule.Schedule<any, E>
+      retry?: Schedule.Schedule<unknown, E>
+      repeat?: Schedule.Schedule<unknown, A>
     },
   ): StateMachine<
     QueryState_<A, E, undefined>,
@@ -56,7 +58,8 @@ export const trackEffect: {
   options?: {
     initialProgress?: P
     runOnStart?: { input: I } | (I extends void ? true : never)
-    retry?: Schedule.Schedule<any, E>
+    retry?: Schedule.Schedule<unknown, E>
+    repeat?: Schedule.Schedule<unknown, A>
   },
 ): StateMachine<
   QueryState_<A, E, P>,
@@ -76,13 +79,17 @@ export const trackEffect: {
     })),
     _ =>
       options?.runOnStart
-        ? pipe(options.runOnStart, options =>
+        ? pipe(options.runOnStart, start =>
             make({
               ..._,
               start: machine =>
                 _.actions(machine)
-                  .submit(options === true ? (undefined as I) : options.input)
-                  .pipe(Effect.runPromiseExit),
+                  .submit(start === true ? (undefined as I) : start.input)
+                  .pipe(
+                    _ =>
+                      options?.repeat ? Effect.repeat(_, options.repeat) : _,
+                    Effect.runPromiseExit,
+                  ),
             }),
           )
         : _,
