@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+// oxlint-disable no-unused-vars
 
-import { Effect, Either, flow, Option, pipe, Schema } from 'effect'
-import { NoSuchElementException } from 'effect/Cause'
-import { ParseError } from 'effect/ParseResult'
-import { AnyStateActions, Store } from '../../../definition.js'
+import { Effect, flow, pipe, Schema, type Result } from 'effect'
+import type { NoSuchElementError } from 'effect/Cause'
+import type { SchemaError } from 'effect/Schema'
+import type { AnyStateActions, Store } from '../../../definition.js'
 import { ValidationError } from '../Error.js'
-import { Form, FormActions } from '../definition.js'
+import { Form, type FormActions } from '../definition.js'
 
 type FormFieldState<A, I, E> = { value: I; error: E | null }
 
@@ -13,14 +13,14 @@ type FormFieldBasicActions<A, I, E> = FormActions<A, I, E> & {
   set: (value: I) => void
   update: (f: (previous: I) => I) => void
   error: { set: (error: E | null) => void }
-  check: () => Promise<Either.Either<A, ValidationError<E>>>
+  check: () => Promise<Result.Result<A, ValidationError<E>>>
 }
 
 export class FormField<
   A,
   I,
   E,
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  // oxlint-disable-next-line typescript/no-empty-object-type
   ExtraActions extends AnyStateActions = {},
 > extends Form<
   A,
@@ -41,7 +41,7 @@ export class FormField<
     return new FormField<A2, I, E, NextActions>({
       ...this,
       actions: (machine: any) => f(this.actions(machine), machine),
-    } as any)
+    })
   }
 
   parse: {
@@ -64,7 +64,7 @@ export class FormField<
     const from =
       typeof args === 'function' ? (_: A2) => _ as unknown as A : args.from
     return this.withError<E2>().mapActions((actions, { Store }) => {
-      const validate = (): Effect.Effect<A2, ValidationError<E2 | E>, never> =>
+      const validate = (): Effect.Effect<A2, ValidationError<E2 | E>> =>
         actions.validate().pipe(
           Effect.flatMap(
             flow(
@@ -86,7 +86,7 @@ export class FormField<
       return {
         ...actions,
         validate,
-        check: () => validate().pipe(Effect.either, Effect.runPromise),
+        check: () => validate().pipe(Effect.result, Effect.runPromise),
         setStateFromData: data => actions.setStateFromData(from(data)),
       }
     })
@@ -129,10 +129,10 @@ export class FormField<
       to: (value: NoInfer<A>) => A2
       from: (data: A2) => NoInfer<A>
     }): FormField<A2, I, E>
-    <A2>(schema: Schema.Schema<A2, A>): FormField<A2, I, E | ParseError>
+    <A2>(schema: Schema.Codec<A2, A>): FormField<A2, I, E | SchemaError>
     <A2, E2>(
-      schema: Schema.Schema<A2, A>,
-      makeError: (error: ParseError) => E2,
+      schema: Schema.Codec<A2, A>,
+      makeError: (error: SchemaError) => E2,
     ): FormField<A2, I, E | E2>
   } = <A2, E2>(
     args:
@@ -141,14 +141,14 @@ export class FormField<
           to: (value: NoInfer<A>) => A2
           from: (data: A2) => NoInfer<A>
         }
-      | Schema.Schema<A2, A>,
-    makeError?: (error: ParseError) => E2,
+      | Schema.Codec<A2, A>,
+    makeError?: (error: SchemaError) => E2,
   ): FormField<A2, I, any> => {
     if (Schema.isSchema(args)) {
-      const schema = args as Schema.Schema<A2, A>
+      const schema = args
       return this.parse({
         to: value =>
-          Effect.mapError(Schema.decode(schema)(value), parseError =>
+          Effect.mapError(Schema.decodeEffect(schema)(value), parseError =>
             (makeError ?? (_ => _))(parseError),
           ),
         from: Schema.encodeSync(schema),
@@ -187,8 +187,8 @@ export class FormField<
       predicate(value) ? Effect.succeed(value) : Effect.fail(onFail(value)),
     )
 
-  required(): FormField<NonNullable<A>, I, E | NoSuchElementException> {
-    return this.parse(Option.fromNullable)
+  required(): FormField<NonNullable<A>, I, E | NoSuchElementError> {
+    return this.parse(Effect.fromNullishOr)
   }
 }
 
@@ -223,7 +223,7 @@ export const make = <A, I, E>(args: {
           set: error => Store.update(_ => ({ value: _.value, error })),
         },
         validate,
-        check: () => validate().pipe(Effect.either, Effect.runPromise),
+        check: () => validate().pipe(Effect.result, Effect.runPromise),
         setStateFromData: data =>
           Store.update(_ => ({
             ..._,
@@ -243,7 +243,7 @@ export const of = <A>(initial: A): FormField<A, A, never> =>
 
 export const nullOr = <A>(initial?: A | null) => of<A | null>(initial ?? null)
 
-// eslint-disable-next-line @typescript-eslint/no-duplicate-type-constituents
+// oxlint-disable-next-line typescript/no-duplicate-type-constituents
 export const undefinedOr = <A>(initial?: A | undefined) =>
   of<A | undefined>(initial)
 
@@ -262,12 +262,16 @@ export const TrimStringOrUndefined = TrimString.transform({
 })
 
 export const NonEmptyString = String.parse({
-  to: _ => Schema.decodeOption(Schema.NonEmptyString)(_),
+  to: _ => Effect.fromOption(Schema.decodeOption(Schema.NonEmptyString)(_)),
   from: _ => _,
 })
 
 export const TrimNonEmptyString = String.parse({
   to: _ =>
-    Schema.decodeOption(Schema.compose(Schema.Trim, Schema.NonEmptyString))(_),
+    Effect.fromOption(
+      Schema.decodeOption(
+        Schema.Trim.pipe(Schema.decodeTo(Schema.NonEmptyString)),
+      )(_),
+    ),
   from: _ => _,
 })

@@ -1,13 +1,13 @@
 import { describe, expect, it } from '@effect/vitest'
 import { StateMachine } from '@matheuspuel/state-machine'
-import { Effect, pipe } from 'effect'
+import { pipe, Ref } from 'effect'
 
 describe('of', () => {
   it('should work', () => {
     const machine = StateMachine.of('')
     const instance = StateMachine.run(machine)
     instance.actions.set('a')
-    const state = instance.ref.get.pipe(Effect.runSync)
+    const state = Ref.getUnsafe(instance.ref)
     expect(state).toStrictEqual('a')
     const data = instance.actions.get()
     expect(data).toStrictEqual('a')
@@ -31,7 +31,7 @@ describe('Struct', () => {
         }),
     )
     const instance = StateMachine.run(machine)
-    const getState = () => instance.ref.get.pipe(Effect.runSync)
+    const getState = () => Ref.getUnsafe(instance.ref)
     expect(getState()).toStrictEqual({ a: 0, b: '' })
     instance.actions.a.set(1)
     expect(getState()).toStrictEqual({ a: 1, b: '' })
@@ -44,7 +44,7 @@ describe('Struct', () => {
     it('should work', () => {
       const machine = StateMachine.Array(StateMachine.of(0))
       const instance = StateMachine.run(machine)
-      const getState = () => instance.ref.get.pipe(Effect.runSync)
+      const getState = () => Ref.getUnsafe(instance.ref)
       expect(getState()).toStrictEqual([])
       instance.actions.append(1)
       instance.actions.append(2)
@@ -69,7 +69,7 @@ describe('Struct', () => {
       const makeId = (value: string) => value as Id
       const machine = StateMachine.Record.keyType<Id>()(StateMachine.of(0))
       const instance = StateMachine.run(machine)
-      const getState = () => instance.ref.get.pipe(Effect.runSync)
+      const getState = () => Ref.getUnsafe(instance.ref)
       expect(getState()).toStrictEqual({})
       instance.actions.insert(makeId('a'), 1)
       expect(getState()).toStrictEqual({ a: 1 })
@@ -96,7 +96,7 @@ describe('Struct', () => {
         getKey: _ => makeId(_.toString()),
       })
       const instance = StateMachine.run(machine)
-      const getState = () => instance.ref.get.pipe(Effect.runSync)
+      const getState = () => Ref.getUnsafe(instance.ref)
       expect(getState()).toStrictEqual({})
       instance.actions.insert(1)
       expect(getState()).toStrictEqual({ '1': 1 })

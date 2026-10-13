@@ -1,10 +1,10 @@
 import { Array, Effect, Ref } from 'effect'
 import {
-  AnyStateActions,
+  type AnyStateActions,
   makeStore,
   prepareActions,
-  PreparedStateActions,
-  StateMachine,
+  type PreparedStateActions,
+  type StateMachine,
 } from '../definition.js'
 
 type SubscriptionTask<State> = (state: State) => Effect.Effect<void>
@@ -15,28 +15,24 @@ export type Instance<State, Actions extends AnyStateActions> = {
   startPromise: Promise<unknown> | undefined
   subscribe: (
     task: SubscriptionTask<State>,
-  ) => Effect.Effect<
-    { unsubscribe: Effect.Effect<void, never, never> },
-    never,
-    never
-  >
+  ) => Effect.Effect<{ unsubscribe: Effect.Effect<void> }>
 }
 
 export const run = <State, Actions extends AnyStateActions>(
   machine: StateMachine<State, Actions>,
 ): Instance<State, Actions> => {
-  const subscriptionsRef = Ref.unsafeMake<SubscriptionTask<State>[]>([])
-  const ref = Ref.unsafeMake(machine.initialState)
+  const subscriptionsRef = Ref.makeUnsafe<SubscriptionTask<State>[]>([])
+  const ref = Ref.makeUnsafe(machine.initialState)
   const store = makeStore<State>({
-    get: () => ref.get.pipe(Effect.runSync),
+    get: () => Ref.get(ref).pipe(Effect.runSync),
     update: fn =>
       Effect.gen(function* () {
-        const previousState = yield* ref.get
+        const previousState = yield* Ref.get(ref)
         const state = fn(previousState)
         yield* Ref.set(ref, state)
-        yield* Effect.forEach(yield* subscriptionsRef.get, _ => _(state)).pipe(
-          Effect.exit,
-        )
+        yield* Effect.forEach(yield* Ref.get(subscriptionsRef), _ =>
+          _(state),
+        ).pipe(Effect.exit)
         void machine.onUpdate?.(state)
       }).pipe(Effect.runSync),
   })

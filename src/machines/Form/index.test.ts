@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@effect/vitest'
 import { Form, StateMachine } from '@matheuspuel/state-machine'
-import { Effect } from 'effect'
-import { NoSuchElementException } from 'effect/Cause'
+import { Effect, Ref } from 'effect'
+import { NoSuchElementError } from 'effect/Cause'
 
 describe('Form', () => {
   it('should work', () => {
@@ -14,7 +14,7 @@ describe('Form', () => {
       b: Form.Struct({ c: formField }),
     })
     const instance = StateMachine.run(machine)
-    const getState = () => instance.ref.get.pipe(Effect.runSync)
+    const getState = () => Ref.getUnsafe(instance.ref)
     expect(getState()).toStrictEqual<ReturnType<typeof getState>>({
       a: { value: 0, error: null },
       b: { c: { value: 0, error: null } },
@@ -69,13 +69,33 @@ describe('Form', () => {
     })
   })
 
+  it('TrimNonEmptyString trims non-empty values and rejects whitespace', () => {
+    const form = StateMachine.run(Form.Field.TrimNonEmptyString)
+    const getState = () => Ref.getUnsafe(form.ref)
+
+    form.actions.set('   ')
+    form.actions.validate().pipe(Effect.runSyncExit)
+    expect(getState()).toStrictEqual({
+      value: '   ',
+      error: new NoSuchElementError('Effect.fromOption: Option.none'),
+    })
+
+    form.actions.set('  hello  ')
+    const data = form.actions.validate().pipe(Effect.runSync)
+    expect(data).toBe('hello')
+    expect(getState()).toStrictEqual({
+      value: '  hello  ',
+      error: null,
+    })
+  })
+
   it('TaggedUnion', () => {
     const stateMachine = Form.TaggedUnion('_tag', {
       A: Form.Struct({ a: Form.Field.of(0), x: Form.Field.of('') }),
       B: Form.Struct({ b: Form.Field.of(0), x: Form.Field.of('') }),
     })
     const form = StateMachine.run(stateMachine)
-    const getState = () => form.ref.get.pipe(Effect.runSync)
+    const getState = () => Ref.getUnsafe(form.ref)
 
     form.actions.A.a.set(1)
     form.actions.A.x.set('a')
@@ -104,7 +124,7 @@ describe('Form', () => {
       list: Form.Array(Form.Struct({ a: Form.Field.NonEmptyString })),
     })
     const form = StateMachine.run(stateMachine)
-    const getState = () => form.ref.get.pipe(Effect.runSync)
+    const getState = () => Ref.getUnsafe(form.ref)
 
     form.actions.validate().pipe(Effect.runSyncExit)
     expect(getState()).toStrictEqual<ReturnType<typeof getState>>({
@@ -116,7 +136,14 @@ describe('Form', () => {
     })
     form.actions.validate().pipe(Effect.runSyncExit)
     expect(getState()).toStrictEqual<ReturnType<typeof getState>>({
-      list: [{ a: { value: '', error: new NoSuchElementException() } }],
+      list: [
+        {
+          a: {
+            value: '',
+            error: new NoSuchElementError('Effect.fromOption: Option.none'),
+          },
+        },
+      ],
     })
     form.actions.list.index(0).a.set('aaa')
     const data = form.actions.validate().pipe(Effect.runSync)
@@ -164,7 +191,7 @@ describe('Form', () => {
       })),
     })
     const form = StateMachine.run(stateMachine)
-    const getState = () => form.ref.get.pipe(Effect.runSync)
+    const getState = () => Ref.getUnsafe(form.ref)
 
     form.actions.newPassword.password.set('123456')
     form.actions.newPassword.confirmation.set('1234567')

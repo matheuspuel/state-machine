@@ -1,15 +1,14 @@
 import * as React from 'react'
 import {
-  AnyStateActions,
+  type AnyStateActions,
   makeStore,
   prepareActions,
-  StateMachine,
+  type StateMachine,
 } from '../definition.js'
 
 export const useStateMachine = <State, Actions extends AnyStateActions>(
   stateMachine:
-    | StateMachine<State, Actions>
-    | (() => StateMachine<State, Actions>),
+    StateMachine<State, Actions> | (() => StateMachine<State, Actions>),
 ) => {
   const machine =
     typeof stateMachine === 'function' ? stateMachine() : stateMachine
@@ -18,6 +17,7 @@ export const useStateMachine = <State, Actions extends AnyStateActions>(
   const getState = React.useMemo(() => () => stateRef.current, [])
   const store = React.useMemo(
     () =>
+      // oxlint-disable-next-line react/refs
       makeStore<State>({
         get: getState,
         update: fn => {
@@ -36,7 +36,7 @@ export const useStateMachine = <State, Actions extends AnyStateActions>(
   )
   React.useEffect(() => {
     void machine.start?.({ Store: store })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies react-hooks/exhaustive-deps
   }, [])
   return { state, actions }
 }

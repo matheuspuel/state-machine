@@ -1,12 +1,12 @@
-import { Array as Array_, Record as Record_ } from 'effect'
-import { ReadonlyRecord } from 'effect/Record'
+import { Array as Array_, Option, Record as Record_ } from 'effect'
+import type { ReadonlyRecord } from 'effect/Record'
 import {
-  AnyStateActions,
+  type AnyStateActions,
   make,
   makeStore,
-  StateMachine,
-  StateMachineWithoutInitialState,
-  Store,
+  type StateMachine,
+  type StateMachineWithoutInitialState,
+  type Store,
   type,
 } from '../definition.js'
 
@@ -36,12 +36,10 @@ type BooleanActions = BasicActions<boolean> & {
 }
 
 export const Boolean = (initialState: boolean = false) =>
-  of(initialState).mapActions(
-    (actions): BooleanActions => ({
-      ...actions,
-      toggle: () => actions.update(_ => !_),
-    }),
-  )
+  of(initialState).mapActions((actions): BooleanActions => ({
+    ...actions,
+    toggle: () => actions.update(_ => !_),
+  }))
 
 export const String = (initialState: string = '') => of(initialState)
 
@@ -98,7 +96,9 @@ export const Struct: {
     }> &
       Omit<
         {
-          [K in keyof Fields]: Fields[K] extends StateMachineWithoutInitialState<
+          [
+            K in keyof Fields
+          ]: Fields[K] extends StateMachineWithoutInitialState<
             any,
             infer Actions
           >
@@ -163,8 +163,9 @@ const Struct_type =
     BasicActions<A> &
       Omit<
         {
-          [K in keyof Fields &
-            keyof A]: Fields[K] extends StateMachineWithoutInitialState<
+          [
+            K in keyof Fields & keyof A
+          ]: Fields[K] extends StateMachineWithoutInitialState<
             any,
             infer Actions
           >
@@ -185,7 +186,6 @@ type ArrayActions<A, ItemActions extends AnyStateActions> = BasicActions<
   prepend: (value: A) => void
   remove: {
     (index: number): void
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
     (predicate: (item: A, index: number) => boolean): void
   }
   index: (index: number) => ItemActions | null
@@ -246,7 +246,10 @@ export const Array: {
               }
               return state[index]!
             },
-            update: f => Store.update(_ => Array_.modify(_, index, f)),
+            update: f =>
+              Store.update(_ =>
+                Array_.modify(_, index, f).pipe(Option.getOrElse(() => _)),
+              ),
           }),
         })
       },
@@ -268,7 +271,9 @@ export const Array: {
               const state = Store.get()
               const index = state.findIndex(predicate)
               if (index === -1) return
-              Store.update(_ => Array_.modify(_, index, f))
+              Store.update(_ =>
+                Array_.modify(_, index, f).pipe(Option.getOrElse(() => _)),
+              )
             },
           }),
         })

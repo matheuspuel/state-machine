@@ -26,7 +26,6 @@ export const makeStore = <State>(base: StoreBase<State>): Store<State> => ({
 
 export type StateAction<A extends unknown[], B> = (...args: A) => B
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyStateAction = StateAction<any[], unknown>
 
 export type AnyStateActions = {

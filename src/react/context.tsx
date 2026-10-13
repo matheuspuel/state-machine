@@ -1,5 +1,5 @@
 import * as React from 'react'
-import {
+import type {
   AnyStateActions,
   PreparedStateActions,
   StateMachine,
@@ -12,7 +12,6 @@ export const makeStateMachineContext = <State, Actions extends AnyStateActions>(
   const Context = React.createContext<{
     state: State
     actions: PreparedStateActions<Actions>
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
   }>(undefined as any)
   return {
     Provider: (props: { children: React.ReactNode }) => {
@@ -22,7 +21,7 @@ export const makeStateMachineContext = <State, Actions extends AnyStateActions>(
     useActions: () => React.useContext(Context).actions,
     useSelector: <A,>(fn: (state: State) => A) => {
       const state = React.useContext(Context).state
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      // oxlint-disable-next-line react-hooks/exhaustive-deps
       return React.useMemo(() => fn(state), [state])
     },
   }

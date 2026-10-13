@@ -1,0 +1,62 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "env": { "builtin": true },
+  "plugins": ["oxc", "eslint", "typescript", "unicorn", "import", "react"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "rules": {
+    // spread in map is more concise and readable
+    "oxc/no-map-spread": "off",
+    // allow _tag and underscore after the name
+    "eslint/no-underscore-dangle": "off",
+    // sometimes it seems better to reuse names
+    "eslint/no-shadow": "off",
+    // allow spreading class instances
+    "typescript/no-misused-spread": "off",
+    // allow Effect.gen with no return value
+    "typescript/consistent-return": "off",
+    // allow using type parameters only once
+    "typescript/no-unnecessary-type-parameters": "off",
+    // sometimes is necessary, and disabling inline is useless because the use of "as" is already a flag
+    "typescript/no-unsafe-type-assertion": "off",
+    // allow Effect's Array.sort
+    "unicorn/no-array-sort": "off",
+    // allow using type extractors such as Schema.Schema.Type
+    "import/namespace": "off",
+
+    // extra rules
+    "oxc/misrefactored-assign-op": "error",
+    "eslint/no-console": "error",
+    "eslint/no-var": "error",
+    "eslint/no-useless-constructor": "error",
+    "eslint/no-unneeded-ternary": "error",
+    "eslint/no-useless-concat": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-useless-empty-export": "error",
+    "typescript/no-import-type-side-effects": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      { "fixStyle": "inline-type-imports" }
+    ],
+    "typescript/no-empty-object-type": [
+      "error",
+      // allow declare derived types as interface
+      { "allowInterfaces": "with-single-extends" }
+    ],
+    "unicorn/no-abusive-eslint-disable": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "unicorn/no-accessor-recursion": "error",
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "import/no-empty-named-blocks": "error"
+  }
+}

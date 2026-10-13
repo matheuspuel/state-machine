@@ -1,6 +1,6 @@
 import { QueryState as QueryState_ } from '@matheuspuel/query-state'
-import { DateTime, Effect, pipe, Schedule } from 'effect'
-import { make, StateMachine } from '../definition.js'
+import { DateTime, Effect, pipe, type Schedule } from 'effect'
+import { make, type StateMachine } from '../definition.js'
 import { of } from './basic.js'
 
 export const QueryState = <A, E, P = undefined>() =>
@@ -8,18 +8,19 @@ export const QueryState = <A, E, P = undefined>() =>
     ...actions,
     start: (loading: { progress: P }) =>
       actions.update(_ =>
+        // oxlint-disable-next-line typescript/no-unnecessary-type-assertion
         _.start({
-          time: DateTime.unsafeNow(),
+          time: DateTime.nowUnsafe(),
           progress: loading.progress,
         } as any),
       ),
     succeed: (success: { data: A }) =>
       actions.update(_ =>
-        _.succeed({ time: DateTime.unsafeNow(), data: success.data }),
+        _.succeed({ time: DateTime.nowUnsafe(), data: success.data }),
       ),
     fail: (failure: { error: E }) =>
       actions.update(_ =>
-        _.fail({ time: DateTime.unsafeNow(), error: failure.error }),
+        _.fail({ time: DateTime.nowUnsafe(), error: failure.error }),
       ),
     invalidate: () => actions.update(_ => _.invalidate()),
   }))
@@ -48,7 +49,7 @@ export const trackEffect: {
       repeat?: Schedule.Schedule<unknown, A>
     },
   ): StateMachine<
-    QueryState_<A, E, undefined>,
+    QueryState_<A, E>,
     ReturnType<ReturnType<typeof QueryState<A, E, undefined>>['actions']> & {
       submit: (input: I) => Effect.Effect<A, E>
     }

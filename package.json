@@ -25,39 +25,35 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "build:watch": "tsc --project tsconfig.build.json --watch",
-    "lint": "eslint . --max-warnings 0 --config .eslintrc.production.cjs",
-    "lint:fix": "eslint . --fix --config .eslintrc.production.cjs",
+    "lint": "oxlint . --deny-warnings && prettier --check .",
+    "lint:fix": "oxlint . --deny-warnings --fix && prettier --write .",
     "typecheck": "tsc",
     "test": "vitest",
     "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm test --run",
     "upload": "pnpm check && pnpm publish"
   },
   "dependencies": {
-    "@matheuspuel/optic": "^0.3.0",
-    "@matheuspuel/query-state": "^0.3.0",
-    "effect": "^3.19.16",
+    "@matheuspuel/optic": "^0.4.0",
+    "@matheuspuel/query-state": "^0.4.1",
+    "effect": "^4.0.4",
     "react": "^19.1.0",
-    "use-sync-external-store": "^1.5.0"
+    "use-sync-external-store": "^1.7.0"
   },
   "devDependencies": {
-    "@effect/language-service": "^0.73.1",
-    "@effect/vitest": "^0.27.0",
+    "@effect/language-service": "^0.87.4",
+    "@effect/vitest": "^4.0.4",
     "@matheuspuel/state-machine": "file:.",
     "@types/node": "^25.0.8",
     "@types/react": "^19.1.17",
     "@types/use-sync-external-store": "^1.5.0",
-    "@typescript-eslint/eslint-plugin": "^8.55.0",
-    "@typescript-eslint/parser": "^8.55.0",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/coverage-v8": "^5.0.4",
     "cross-env": "^7.0.3",
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-prettier": "^5.2.6",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "prettier": "^3.8.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1",
-    "vitest": "^4.0.18"
+    "oxlint": "^1.88.0",
+    "oxlint-tsgolint": "^7.0.2004",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
   }
 }

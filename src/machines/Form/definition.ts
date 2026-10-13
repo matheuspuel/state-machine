@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+// oxlint-disable no-unused-vars
 
-import { Array as Array_, Effect, Either, pipe, Record } from 'effect'
+import { Array as Array_, Effect, Option, pipe, Record, Result } from 'effect'
 import {
-  AnyStateActions,
+  type AnyStateActions,
   makeStore,
   StateMachine,
-  Store,
+  type Store,
   type,
 } from '../../definition.js'
 import { Struct as StateMachineStruct } from '../basic.js'
@@ -20,7 +20,7 @@ export class Form<
   A,
   I,
   E,
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  // oxlint-disable-next-line typescript/no-empty-object-type
   ExtraActions extends AnyStateActions = {},
 > extends StateMachine<I, FormActions<A, I, E> & ExtraActions> {
   mapActions<A2, NextActions extends AnyStateActions>(
@@ -61,12 +61,12 @@ export class Form<
       throw new Error('Invalid arguments')
     }
     return this.mapActions(actions => {
-      const validate = (): Effect.Effect<A2, ValidationError<E>, never> =>
+      const validate = (): Effect.Effect<A2, ValidationError<E>> =>
         Effect.map(actions.validate(), to)
       return {
         ...actions,
         validate,
-        check: () => validate().pipe(Effect.either, Effect.runPromise),
+        check: () => validate().pipe(Effect.result, Effect.runPromise),
         setStateFromData: (data: A2) => actions.setStateFromData(from(data)),
       }
     })
@@ -134,8 +134,16 @@ export const Struct = <Fields extends Record<string, Form<any, any, any, any>>>(
             >
           )?.().pipe(Effect.mapError(_ => _.error)),
         ),
-        { mode: 'validate' },
-      ).pipe(Effect.mapError(error => new ValidationError({ error }))),
+        { mode: 'result' },
+      ).pipe(
+        Effect.flatMap(results =>
+          Result.all(results).pipe(
+            Effect.fromResult,
+            Effect.mapError(() => Record.map(results, Result.getSuccess)),
+          ),
+        ),
+        Effect.mapError(error => new ValidationError({ error })),
+      ),
   })) as any
 
 export const TaggedUnion = <
@@ -189,7 +197,7 @@ export const TaggedUnion = <
       set: (tag: keyof Variants) => void
       validate: () => Effect.Effect<keyof Variants, ValidationError<never>>
       check: () => Promise<
-        Either.Either<keyof Variants, ValidationError<never>>
+        Result.Result<keyof Variants, ValidationError<never>>
       >
     }
   }
@@ -247,7 +255,7 @@ export const TaggedUnion = <
             validate: () => Effect.succeed(Store.get()[tagKey].value),
             check: () =>
               Effect.succeed(Store.get()[tagKey].value).pipe(
-                Effect.either,
+                Effect.result,
                 Effect.runPromise,
               ),
           },
@@ -317,7 +325,12 @@ export const Array = <Item extends Form<any, any, any, any>>(
         item.actions({
           Store: makeStore({
             get: () => Store.get()[index]!,
-            update: f => Store.update(state => Array_.modify(state, index, f)),
+            update: f =>
+              Store.update(state =>
+                Array_.modify(state, index, f).pipe(
+                  Option.getOrElse(() => state),
+                ),
+              ),
           }),
         })
       return {
@@ -334,8 +347,16 @@ export const Array = <Item extends Form<any, any, any, any>>(
                 .validate()
                 .pipe(Effect.mapError((_: any) => _.error))
             }),
-            { mode: 'validate' },
-          ).pipe(Effect.mapError(error => new ValidationError({ error }))),
+            { mode: 'result' },
+          ).pipe(
+            Effect.flatMap(results =>
+              Result.all(results).pipe(
+                Effect.fromResult,
+                Effect.mapError(() => Array_.map(results, Result.getSuccess)),
+              ),
+            ),
+            Effect.mapError(error => new ValidationError({ error })),
+          ),
         setStateFromData: (data: any[]) => {
           Store.update(() => data.map(() => item.initialState as ItemState))
           data.forEach((itemData, index) => {
