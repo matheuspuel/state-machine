@@ -28,8 +28,8 @@ export class FormField<
   E,
   FormFieldBasicActions<A, I, E> & ExtraActions
 > {
-  withError<E2>(): FormField<A, I, E2 | E> {
-    return this as FormField<A, I, E2 | E>
+  withError<E2>(): FormField<A, I, E2 | E, ExtraActions> {
+    return this as FormField<A, I, E2 | E, ExtraActions>
   }
 
   mapActions<A2, NextActions extends AnyStateActions>(
@@ -47,11 +47,11 @@ export class FormField<
   parse: {
     <A2 extends A, E2>(
       to: (value: NoInfer<A>) => Effect.Effect<A2, E2>,
-    ): FormField<A2, I, E2 | E>
+    ): FormField<A2, I, E2 | E, ExtraActions>
     <A2, E2>(args: {
       to: (value: NoInfer<A>) => Effect.Effect<A2, E2>
       from: (data: A2) => NoInfer<A>
-    }): FormField<A2, I, E2 | E>
+    }): FormField<A2, I, E2 | E, ExtraActions>
   } = <A2, E2>(
     args:
       | ((value: NoInfer<A>) => Effect.Effect<A2, E2>)
@@ -59,7 +59,7 @@ export class FormField<
           to: (value: NoInfer<A>) => Effect.Effect<A2, E2>
           from: (data: A2) => NoInfer<A>
         },
-  ): FormField<A2, I, E2 | E> => {
+  ): FormField<A2, I, E2 | E, ExtraActions> => {
     const to = typeof args === 'function' ? args : args.to
     const from =
       typeof args === 'function' ? (_: A2) => _ as unknown as A : args.from
@@ -93,11 +93,13 @@ export class FormField<
   }
 
   mapData: {
-    <A2 extends A>(to: (value: NoInfer<A>) => A2): FormField<A2, I, E>
+    <A2 extends A>(
+      to: (value: NoInfer<A>) => A2,
+    ): FormField<A2, I, E, ExtraActions>
     <A2>(args: {
       to: (value: NoInfer<A>) => A2
       from: (data: A2) => NoInfer<A>
-    }): FormField<A2, I, E>
+    }): FormField<A2, I, E, ExtraActions>
   } = <A2>(
     args:
       | ((value: NoInfer<A>) => A2)
@@ -105,7 +107,7 @@ export class FormField<
           to: (value: NoInfer<A>) => A2
           from: (data: A2) => NoInfer<A>
         },
-  ): FormField<A2, I, any> => {
+  ): FormField<A2, I, any, ExtraActions> => {
     if (typeof args === 'function') {
       const to = args
       return this.parse({

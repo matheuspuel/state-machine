@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@effect/vitest'
 import { Form, StateMachine } from '@matheuspuel/state-machine'
-import { Effect, Ref } from 'effect'
+import { type Brand, Effect, Ref, Schema } from 'effect'
 import { NoSuchElementError } from 'effect/Cause'
 
 describe('Form', () => {
@@ -66,6 +66,34 @@ describe('Form', () => {
     Form.Field.String.withError<'CustomError'>().transform({
       to: _ => _,
       from: _ => _,
+    })
+  })
+
+  it('map data to class', () => {
+    class Point extends Schema.Class<Point, Brand.Brand<'Point'>>('Point')({
+      x: Schema.Number,
+      y: Schema.Number,
+    }) {}
+    const form = StateMachine.run(
+      Form.Struct({
+        point: Form.Struct({
+          x: Form.Field.of(0),
+          y: Form.Field.of(0),
+        }).mapData(_ => Point.make(_)),
+      }),
+    )
+    const getState = () => Ref.getUnsafe(form.ref)
+
+    form.actions.point.x.set(1)
+    form.actions.validate().pipe(Effect.runSyncExit)
+    expect(getState()).toStrictEqual<ReturnType<typeof getState>>({
+      point: { x: { value: 1, error: null }, y: { value: 0, error: null } },
+    })
+    const data: Point = form.actions.validate().pipe(Effect.runSync).point
+    expect(data).toStrictEqual<Point>(Point.make({ x: 1, y: 0 }))
+    form.actions.setStateFromData({ point: Point.make({ x: 2, y: 3 }) })
+    expect(getState()).toStrictEqual<ReturnType<typeof getState>>({
+      point: { x: { value: 2, error: null }, y: { value: 3, error: null } },
     })
   })
 

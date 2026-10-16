@@ -36,11 +36,11 @@ export class Form<
   }
 
   mapData: {
-    <A2 extends A>(to: (value: NoInfer<A>) => A2): Form<A2, I, E>
+    <A2 extends A>(to: (value: NoInfer<A>) => A2): Form<A2, I, E, ExtraActions>
     <A2>(args: {
       to: (value: NoInfer<A>) => A2
       from: (data: A2) => NoInfer<A>
-    }): Form<A2, I, E>
+    }): Form<A2, I, E, ExtraActions>
   } = <A2>(
     args:
       | ((value: NoInfer<A>) => A2)
@@ -48,7 +48,7 @@ export class Form<
           to: (value: NoInfer<A>) => A2
           from: (data: A2) => NoInfer<A>
         },
-  ): Form<A2, I, any> => {
+  ): Form<A2, I, any, ExtraActions> => {
     let to
     let from
     if (typeof args === 'function') {
@@ -72,6 +72,16 @@ export class Form<
     })
   }
 }
+
+export const make = <
+  A,
+  I,
+  E,
+  // oxlint-disable-next-line typescript/no-empty-object-type
+  ExtraActions extends AnyStateActions = {},
+>(
+  machine: StateMachine<I, FormActions<A, I, E> & ExtraActions>,
+): Form<A, I, E, ExtraActions> => new Form(machine)
 
 export const Struct = <Fields extends Record<string, Form<any, any, any, any>>>(
   fields: Fields,
@@ -117,34 +127,36 @@ export const Struct = <Fields extends Record<string, Form<any, any, any, any>>>(
       : never
   }
 > =>
-  StateMachineStruct<Fields>(fields).mapActions(actions => ({
-    ...actions,
-    setStateFromData: data => {
-      Object.keys(fields).map(key =>
-        (actions[key]!.setStateFromData as any)?.(data[key]),
-      )
-    },
-    validate: () =>
-      Effect.all(
-        Record.map(fields, (_, key) =>
-          (
-            actions[key]!.validate as () => Effect.Effect<
-              any,
-              ValidationError<any>
-            >
-          )?.().pipe(Effect.mapError(_ => _.error)),
-        ),
-        { mode: 'result' },
-      ).pipe(
-        Effect.flatMap(results =>
-          Result.all(results).pipe(
-            Effect.fromResult,
-            Effect.mapError(() => Record.map(results, Result.getSuccess)),
+  make(
+    StateMachineStruct<Fields>(fields).mapActions(actions => ({
+      ...actions,
+      setStateFromData: data => {
+        Object.keys(fields).map(key =>
+          (actions[key]!.setStateFromData as any)?.(data[key]),
+        )
+      },
+      validate: () =>
+        Effect.all(
+          Record.map(fields, (_, key) =>
+            (
+              actions[key]!.validate as () => Effect.Effect<
+                any,
+                ValidationError<any>
+              >
+            )?.().pipe(Effect.mapError(_ => _.error)),
           ),
+          { mode: 'result' },
+        ).pipe(
+          Effect.flatMap(results =>
+            Result.all(results).pipe(
+              Effect.fromResult,
+              Effect.mapError(() => Record.map(results, Result.getSuccess)),
+            ),
+          ),
+          Effect.mapError(error => new ValidationError({ error })),
         ),
-        Effect.mapError(error => new ValidationError({ error })),
-      ),
-  })) as any
+    })) as any,
+  )
 
 export const TaggedUnion = <
   TagKey extends string,
@@ -218,78 +230,80 @@ export const TaggedUnion = <
       : never
   }
 
-  return type<InternalState>()
-    .make({
-      initialState: {
-        [tagKey]: { value: initialTag, error: null },
-        ...Object.fromEntries(
-          variantKeys.map(key => [key, variants[key]!.initialState]),
-        ),
-      } as InternalState,
-      actions: ({ Store }) => {
-        const variantActions = Object.fromEntries(
-          variantKeys.map(key => {
-            const machine = variants[key]!
-            const machineActions = machine.actions({
-              Store: makeStore({
-                get: () => Store.get()[key],
-                update: (f: any) =>
-                  Store.update(state => ({
-                    ...state,
-                    [key]: f(state[key]),
-                  })),
-              }),
-            })
-            return [key, machineActions]
-          }),
-        ) as { [k in keyof Variants]: any }
+  return make(
+    type<InternalState>()
+      .make({
+        initialState: {
+          [tagKey]: { value: initialTag, error: null },
+          ...Object.fromEntries(
+            variantKeys.map(key => [key, variants[key]!.initialState]),
+          ),
+        } as InternalState,
+        actions: ({ Store }) => {
+          const variantActions = Object.fromEntries(
+            variantKeys.map(key => {
+              const machine = variants[key]!
+              const machineActions = machine.actions({
+                Store: makeStore({
+                  get: () => Store.get()[key],
+                  update: (f: any) =>
+                    Store.update(state => ({
+                      ...state,
+                      [key]: f(state[key]),
+                    })),
+                }),
+              })
+              return [key, machineActions]
+            }),
+          ) as { [k in keyof Variants]: any }
 
-        return {
-          ...variantActions,
-          [tagKey]: {
-            set: (tag: keyof Variants) =>
+          return {
+            ...variantActions,
+            [tagKey]: {
+              set: (tag: keyof Variants) =>
+                Store.update(_ => ({
+                  ..._,
+                  [tagKey]: { value: tag, error: null },
+                })),
+              validate: () => Effect.succeed(Store.get()[tagKey].value),
+              check: () =>
+                Effect.succeed(Store.get()[tagKey].value).pipe(
+                  Effect.result,
+                  Effect.runPromise,
+                ),
+            },
+            validate: () => {
+              const tag = Store.get()[tagKey].value
+              const variantAction = variantActions[tag] as any
+              return pipe(
+                variantAction.validate(),
+                Effect.map((result: any) => ({ ...result, [tagKey]: tag })),
+              )
+            },
+            setStateFromData: (data: any) => {
+              const tag = data[tagKey]
               Store.update(_ => ({
                 ..._,
                 [tagKey]: { value: tag, error: null },
-              })),
-            validate: () => Effect.succeed(Store.get()[tagKey].value),
-            check: () =>
-              Effect.succeed(Store.get()[tagKey].value).pipe(
-                Effect.result,
-                Effect.runPromise,
-              ),
-          },
-          validate: () => {
-            const tag = Store.get()[tagKey].value
-            const variantAction = variantActions[tag] as any
-            return pipe(
-              variantAction.validate(),
-              Effect.map((result: any) => ({ ...result, [tagKey]: tag })),
-            )
-          },
-          setStateFromData: (data: any) => {
-            const tag = data[tagKey]
-            Store.update(_ => ({
-              ..._,
-              [tagKey]: { value: tag, error: null },
-            }))
-            const variantAction = variantActions[tag]
-            variantAction.setStateFromData(data)
-          },
-        }
-      },
-    })
-    .mapActions(actions => {
-      const flatActions = Object.fromEntries(
-        variantKeys.map(key => [key, actions[key as keyof typeof actions]]),
-      )
-      return {
-        ...flatActions,
-        [tagKey]: actions[tagKey as keyof typeof actions],
-        validate: actions.validate,
-        setStateFromData: actions.setStateFromData,
-      } as any
-    }) as any
+              }))
+              const variantAction = variantActions[tag]
+              variantAction.setStateFromData(data)
+            },
+          }
+        },
+      })
+      .mapActions(actions => {
+        const flatActions = Object.fromEntries(
+          variantKeys.map(key => [key, actions[key as keyof typeof actions]]),
+        )
+        return {
+          ...flatActions,
+          [tagKey]: actions[tagKey as keyof typeof actions],
+          validate: actions.validate,
+          setStateFromData: actions.setStateFromData,
+        } as any
+      }) as any,
+  )
 }
 
 export const Array = <Item extends Form<any, any, any, any>>(
@@ -318,53 +332,55 @@ export const Array = <Item extends Form<any, any, any, any>>(
     Item extends Form<infer A, infer I, infer E, infer Actions>
       ? Actions
       : never
-  return type<ReadonlyArray<ItemState>>().make({
-    initialState: [],
-    actions: ({ Store }) => {
-      const getItemActions = (index: number): ItemActions =>
-        item.actions({
-          Store: makeStore({
-            get: () => Store.get()[index]!,
-            update: f =>
-              Store.update(state =>
-                Array_.modify(state, index, f).pipe(
-                  Option.getOrElse(() => state),
+  return make(
+    type<ReadonlyArray<ItemState>>().make({
+      initialState: [],
+      actions: ({ Store }) => {
+        const getItemActions = (index: number): ItemActions =>
+          item.actions({
+            Store: makeStore({
+              get: () => Store.get()[index]!,
+              update: f =>
+                Store.update(state =>
+                  Array_.modify(state, index, f).pipe(
+                    Option.getOrElse(() => state),
+                  ),
+                ),
+            }),
+          })
+        return {
+          addItem: () =>
+            Store.update(state => [...state, item.initialState as ItemState]),
+          removeItem: (index: number) =>
+            Store.update(state => state.filter((_, i) => i !== index)),
+          index: (index: number) => getItemActions(index),
+          validate: () =>
+            Effect.all(
+              Store.get().map((_, index) => {
+                const actions = getItemActions(index) as any
+                return actions
+                  .validate()
+                  .pipe(Effect.mapError((_: any) => _.error))
+              }),
+              { mode: 'result' },
+            ).pipe(
+              Effect.flatMap(results =>
+                Result.all(results).pipe(
+                  Effect.fromResult,
+                  Effect.mapError(() => Array_.map(results, Result.getSuccess)),
                 ),
               ),
-          }),
-        })
-      return {
-        addItem: () =>
-          Store.update(state => [...state, item.initialState as ItemState]),
-        removeItem: (index: number) =>
-          Store.update(state => state.filter((_, i) => i !== index)),
-        index: (index: number) => getItemActions(index),
-        validate: () =>
-          Effect.all(
-            Store.get().map((_, index) => {
-              const actions = getItemActions(index) as any
-              return actions
-                .validate()
-                .pipe(Effect.mapError((_: any) => _.error))
-            }),
-            { mode: 'result' },
-          ).pipe(
-            Effect.flatMap(results =>
-              Result.all(results).pipe(
-                Effect.fromResult,
-                Effect.mapError(() => Array_.map(results, Result.getSuccess)),
-              ),
+              Effect.mapError(error => new ValidationError({ error })),
             ),
-            Effect.mapError(error => new ValidationError({ error })),
-          ),
-        setStateFromData: (data: any[]) => {
-          Store.update(() => data.map(() => item.initialState as ItemState))
-          data.forEach((itemData, index) => {
-            const actions = getItemActions(index) as any
-            actions.setStateFromData(itemData)
-          })
-        },
-      }
-    },
-  }) as any
+          setStateFromData: (data: any[]) => {
+            Store.update(() => data.map(() => item.initialState as ItemState))
+            data.forEach((itemData, index) => {
+              const actions = getItemActions(index) as any
+              actions.setStateFromData(itemData)
+            })
+          },
+        }
+      },
+    }) as any,
+  )
 }
