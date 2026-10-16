@@ -1,5 +1,3 @@
-// oxlint-disable no-unused-vars
-
 import { Array as Array_, Effect, Option, pipe, Record, Result } from 'effect'
 import {
   type AnyStateActions,
@@ -23,6 +21,9 @@ export class Form<
   // oxlint-disable-next-line typescript/no-empty-object-type
   ExtraActions extends AnyStateActions = {},
 > extends StateMachine<I, FormActions<A, I, E> & ExtraActions> {
+  // Type-only marker so A, E and ExtraActions can be inferred exactly
+  declare readonly _types: { A: A; E: E; ExtraActions: ExtraActions }
+
   mapActions<A2, NextActions extends AnyStateActions>(
     f: (
       actions: FormActions<A, I, E> & ExtraActions,
@@ -87,43 +88,23 @@ export const Struct = <Fields extends Record<string, Form<any, any, any, any>>>(
   fields: Fields,
 ): Form<
   {
-    [K in keyof Fields]: Fields[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
-      ? A
+    [K in keyof Fields]: Fields[K] extends Form<any, any, any, any>
+      ? Fields[K]['_types']['A']
       : never
   },
   {
-    [K in keyof Fields]: Fields[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
+    [K in keyof Fields]: Fields[K] extends Form<any, infer I, any, any>
       ? I
       : never
   },
   {
-    [K in keyof Fields]: Fields[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
-      ? E
+    [K in keyof Fields]: Fields[K] extends Form<any, any, any, any>
+      ? Fields[K]['_types']['E']
       : never
   }[keyof Fields],
   {
-    [K in keyof Fields]: Fields[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
-      ? Actions
+    [K in keyof Fields]: Fields[K] extends Form<any, any, any, any>
+      ? Fields[K]['_types']['ExtraActions']
       : never
   }
 > =>
@@ -166,43 +147,23 @@ export const TaggedUnion = <
   variants: Variants,
 ): Form<
   {
-    [K in keyof Variants]: Variants[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
-      ? A & { [TK in TagKey]: K }
+    [K in keyof Variants]: Variants[K] extends Form<any, any, any, any>
+      ? Variants[K]['_types']['A'] & { [TK in TagKey]: K }
       : never
   }[keyof Variants],
   {
-    [K in keyof Variants]: Variants[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
+    [K in keyof Variants]: Variants[K] extends Form<any, infer I, any, any>
       ? I
       : never
   } & { [K in TagKey]: { value: keyof Variants; error: null } },
   {
-    [K in keyof Variants]: Variants[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
-      ? E
+    [K in keyof Variants]: Variants[K] extends Form<any, any, any, any>
+      ? Variants[K]['_types']['E']
       : never
   }[keyof Variants],
   {
-    [K in keyof Variants]: Variants[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
-      ? Actions
+    [K in keyof Variants]: Variants[K] extends Form<any, any, any, any>
+      ? Variants[K]['_types']['ExtraActions']
       : never
   } & {
     [K in TagKey]: {
@@ -220,13 +181,8 @@ export const TaggedUnion = <
   type InternalState = {
     [K in TagKey]: { value: keyof Variants; error: null }
   } & {
-    [K in keyof Variants]: Variants[K] extends Form<
-      infer A,
-      infer I,
-      infer E,
-      infer Actions
-    >
-      ? A
+    [K in keyof Variants]: Variants[K] extends Form<any, any, any, any>
+      ? Variants[K]['_types']['A']
       : never
   }
 
@@ -274,7 +230,7 @@ export const TaggedUnion = <
             },
             validate: () => {
               const tag = Store.get()[tagKey].value
-              const variantAction = variantActions[tag] as any
+              const variantAction = variantActions[tag]
               return pipe(
                 variantAction.validate(),
                 Effect.map((result: any) => ({ ...result, [tagKey]: tag })),
@@ -309,28 +265,25 @@ export const TaggedUnion = <
 export const Array = <Item extends Form<any, any, any, any>>(
   item: Item,
 ): Form<
-  Item extends Form<infer A, infer I, infer E, infer Actions>
-    ? ReadonlyArray<A>
+  Item extends Form<any, any, any, any>
+    ? ReadonlyArray<Item['_types']['A']>
     : never,
-  Item extends Form<infer A, infer I, infer E, infer Actions>
-    ? ReadonlyArray<I>
-    : never,
-  Item extends Form<infer A, infer I, infer E, infer Actions> ? E : never,
+  Item extends Form<any, infer I, any, any> ? ReadonlyArray<I> : never,
+  Item extends Form<any, any, any, any> ? Item['_types']['E'] : never,
   {
     addItem: () => void
     removeItem: (index: number) => void
     index: (
       index: number,
-    ) => Item extends Form<infer A, infer I, infer E, infer Actions>
-      ? Actions
+    ) => Item extends Form<any, any, any, any>
+      ? Item['_types']['ExtraActions']
       : never
   }
 > => {
-  type ItemState =
-    Item extends Form<infer A, infer I, infer E, infer Actions> ? I : never
+  type ItemState = Item extends Form<any, infer I, any, any> ? I : never
   type ItemActions =
-    Item extends Form<infer A, infer I, infer E, infer Actions>
-      ? Actions
+    Item extends Form<any, any, any, any>
+      ? Item['_types']['ExtraActions']
       : never
   return make(
     type<ReadonlyArray<ItemState>>().make({
